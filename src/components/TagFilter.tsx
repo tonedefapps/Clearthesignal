@@ -30,8 +30,8 @@ export default function TagFilter({ active, onChange }: TagFilterProps) {
           className={clsx(
             'text-sm px-4 py-1.5 rounded-full border transition-all duration-150 font-medium',
             active === tag.value
-              ? 'bg-sky-500 border-sky-500 text-white'
-              : 'bg-white/5 border-white/15 text-white/60 hover:border-white/30 hover:text-white/80'
+              ? 'bg-periwinkle border-periwinkle text-white'
+              : 'bg-mesa-light border-white/15 text-sand/60 hover:border-periwinkle/40 hover:text-sand'
           )}
         >
           {tag.label}

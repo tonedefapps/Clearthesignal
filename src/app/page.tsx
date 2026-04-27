@@ -41,18 +41,18 @@ export default function HomePage() {
   }, [activeTag, fetchVideos])
 
   return (
-    <main className="min-h-screen bg-[#0d0d1a] text-white">
+    <main className="min-h-screen bg-mesa text-sand">
       {/* Nav */}
       <nav className="border-b border-white/8 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <Radio size={20} className="text-sky-400" />
+          <Radio size={20} className="text-periwinkle" />
           <span className="font-bold text-white tracking-tight">Clear the Signal</span>
         </div>
         <a
           href="https://discord.gg/placeholder"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-white/50 hover:text-white/80 transition-colors"
+          className="text-sm text-sand/50 hover:text-sand transition-colors"
         >
           community →
         </a>
@@ -60,22 +60,22 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="px-6 pt-20 pb-16 max-w-4xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 text-xs text-sky-400/80 bg-sky-500/10 border border-sky-500/20 rounded-full px-3 py-1 mb-6">
-          <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-pulse" />
+        <div className="inline-flex items-center gap-2 text-xs text-periwinkle-light bg-periwinkle/10 border border-periwinkle/25 rounded-full px-3 py-1 mb-6">
+          <span className="w-1.5 h-1.5 bg-periwinkle rounded-full animate-pulse" />
           AI-curated · updated daily
         </div>
-        <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-4 leading-tight">
+        <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-4 leading-tight text-white">
           Clear the Signal.
           <br />
-          <span className="text-sky-400">Find your frequency.</span>
+          <span className="text-periwinkle-light">Find your frequency.</span>
         </h1>
-        <p className="text-white/50 text-lg max-w-xl mx-auto leading-relaxed">
+        <p className="text-sand/60 text-lg max-w-xl mx-auto leading-relaxed">
           We surface the signal. Consciousness, awareness, synchronicity, disclosure — filtered for substance, credibility, and tone. No noise. No fear. No agenda.
         </p>
         <div className="mt-8 flex items-center justify-center gap-4 flex-wrap">
           <a
             href="#feed"
-            className="flex items-center gap-2 bg-sky-500 hover:bg-sky-400 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
+            className="flex items-center gap-2 bg-periwinkle hover:bg-periwinkle-light text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
           >
             Explore the feed <ArrowDown size={15} />
           </a>
@@ -83,7 +83,7 @@ export default function HomePage() {
             href="https://discord.gg/placeholder"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-white/50 hover:text-white/80 border border-white/15 px-6 py-3 rounded-xl transition-colors"
+            className="text-sm text-sand/50 hover:text-sand border border-white/15 px-6 py-3 rounded-xl transition-colors"
           >
             Join the community
           </a>
@@ -110,10 +110,10 @@ export default function HomePage() {
               body: 'Only content that passes our threshold reaches the feed. No doom, no fringe, no filler.',
             },
           ].map(item => (
-            <div key={item.step} className="bg-white/4 border border-white/8 rounded-2xl p-6">
-              <p className="text-sky-500/60 text-xs font-bold tracking-widest mb-2">{item.step}</p>
+            <div key={item.step} className="bg-mesa-light border border-white/8 rounded-2xl p-6">
+              <p className="text-periwinkle/60 text-xs font-bold tracking-widest mb-2">{item.step}</p>
               <h3 className="text-white font-semibold mb-2">{item.title}</h3>
-              <p className="text-white/50 text-sm leading-relaxed">{item.body}</p>
+              <p className="text-sand/50 text-sm leading-relaxed">{item.body}</p>
             </div>
           ))}
         </div>
@@ -129,7 +129,7 @@ export default function HomePage() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden animate-pulse">
+              <div key={i} className="bg-mesa-light border border-white/10 rounded-2xl overflow-hidden animate-pulse">
                 <div className="aspect-video bg-white/8" />
                 <div className="p-4 flex flex-col gap-3">
                   <div className="h-4 bg-white/8 rounded w-3/4" />
@@ -140,7 +140,7 @@ export default function HomePage() {
             ))}
           </div>
         ) : videos.length === 0 ? (
-          <div className="text-center py-24 text-white/30">
+          <div className="text-center py-24 text-sand/30">
             <Radio size={32} className="mx-auto mb-4 opacity-30" />
             <p className="text-lg font-medium">No signal yet</p>
             <p className="text-sm mt-1">The pipeline runs daily — check back soon.</p>
@@ -156,7 +156,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-white/8 px-6 py-8 text-center">
-        <p className="text-white/30 text-sm">
+        <p className="text-sand/30 text-sm">
           Clear the Signal · curated by AI · no cloud, no agenda, no noise
         </p>
       </footer>
