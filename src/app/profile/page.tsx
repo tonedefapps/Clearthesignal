@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { updateUserProfile } from '@/lib/firebase/users'
 import { HorizontalLockup, SpiralIcon } from '@/components/SpiralIcon'
+import AuthStatus from '@/components/AuthStatus'
 import { CANONICAL_TAGS } from '@/lib/constants/tags'
 import Footer from '@/components/Footer'
 
@@ -78,6 +79,7 @@ export default function ProfilePage() {
           <Link href="/about" className="text-lg text-sand/50 hover:text-desert-sky transition-colors hidden sm:block">
             about
           </Link>
+          <AuthStatus />
         </div>
       </nav>
 

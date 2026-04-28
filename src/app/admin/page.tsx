@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext'
 import { createSignalPost, deleteSignalPost, getSignalPosts, type SignalPost } from '@/lib/firebase/signal'
 import { CANONICAL_TAGS } from '@/lib/constants/tags'
 import { HorizontalLockup } from '@/components/SpiralIcon'
+import AuthStatus from '@/components/AuthStatus'
 
 const EMPTY_FORM = { headline: '', url: '', source: '', note: '', tags: [] as string[] }
 
@@ -104,6 +105,7 @@ export default function AdminPage() {
           <span className="text-xs px-2 py-1 rounded-full bg-periwinkle/20 border border-periwinkle/30 text-periwinkle-light">
             {profile?.role}
           </span>
+          <AuthStatus />
         </div>
       </nav>
 
