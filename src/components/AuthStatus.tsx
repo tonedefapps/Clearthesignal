@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { signOut } from '@/lib/firebase/auth'
+import { InstagramIcon, RedditIcon, DiscordIcon } from './SocialIcons'
 
 export default function AuthStatus() {
   const { user, profile, loading } = useAuth()
@@ -54,7 +55,20 @@ export default function AuthStatus() {
                 dispatch admin
               </Link>
             )}
-            <div className="border-t border-periwinkle/10 mt-1">
+            <div className="border-t border-periwinkle/10 mt-1 px-4 py-3 flex items-center justify-around">
+              <a href="https://www.instagram.com/clearthesignal" target="_blank" rel="noopener noreferrer"
+                className="text-sand/40 hover:text-desert-sky transition-colors" aria-label="instagram">
+                <InstagramIcon size={18} />
+              </a>
+              <a href="https://www.reddit.com/r/clearthesignal/" target="_blank" rel="noopener noreferrer"
+                className="text-sand/40 hover:text-desert-sky transition-colors" aria-label="reddit">
+                <RedditIcon size={18} />
+              </a>
+              <span className="text-sand/20 cursor-default" title="discord — coming soon">
+                <DiscordIcon size={18} />
+              </span>
+            </div>
+            <div className="border-t border-periwinkle/10">
               <button
                 onClick={() => { signOut(); setOpen(false) }}
                 className="block w-full text-left px-4 py-2.5 text-sm text-sand/50 hover:text-white hover:bg-periwinkle/10 transition-colors"
