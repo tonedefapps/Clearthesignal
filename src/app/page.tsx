@@ -54,7 +54,7 @@ export default function HomePage() {
 
       {/* nav */}
       <nav className="border-b border-periwinkle/20 px-6 py-3 flex items-center justify-between backdrop-blur-sm bg-mesa/80 sticky top-0 z-10">
-        <HorizontalLockup height={48} />
+        <HorizontalLockup height={72} />
         <div className="flex items-center gap-6">
           <Link href="/about" className="text-sm text-sand/50 hover:text-desert-sky transition-colors hidden sm:block">
             about
