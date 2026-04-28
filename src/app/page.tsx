@@ -7,6 +7,7 @@ import TagFilter from '@/components/TagFilter'
 import AuthStatus from '@/components/AuthStatus'
 import { useAuth } from '@/context/AuthContext'
 import Footer from '@/components/Footer'
+import SignalStrip from '@/components/SignalStrip'
 import { HorizontalLockup } from '@/components/SpiralIcon'
 
 interface Video {
@@ -63,6 +64,9 @@ export default function HomePage() {
       <nav className="border-b border-periwinkle/20 px-6 py-3 flex items-center justify-between backdrop-blur-sm bg-mesa/80 sticky top-0 z-10">
         <HorizontalLockup height={108} />
         <div className="flex items-center gap-6">
+          <Link href="/signal" className="text-lg text-sand/50 hover:text-desert-sky transition-colors hidden sm:block">
+            dispatch
+          </Link>
           <Link href="/about" className="text-lg text-sand/50 hover:text-desert-sky transition-colors hidden sm:block">
             about
           </Link>
@@ -122,6 +126,8 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      <SignalStrip />
 
       {/* feed */}
       <section id="feed" className="pb-24">

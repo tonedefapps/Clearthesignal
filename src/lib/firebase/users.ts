@@ -9,6 +9,7 @@ export interface UserProfile {
   interests: string[]
   joinedAt: unknown
   profileComplete: boolean
+  role?: 'user' | 'mod' | 'admin'
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {

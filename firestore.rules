@@ -14,6 +14,13 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Signal posts: anyone can read; admins and mods can write/delete
+    match /signal_posts/{postId} {
+      allow read: if true;
+      allow write, delete: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'mod'];
+    }
+
     // Deny everything else
     match /{document=**} {
       allow read, write: if false;
