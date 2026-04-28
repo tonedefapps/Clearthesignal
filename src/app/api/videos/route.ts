@@ -9,19 +9,25 @@ export async function GET(req: NextRequest) {
     const db = getDb()
     const { searchParams } = new URL(req.url)
     const tag = searchParams.get('tag')
+    const tagsParam = searchParams.get('tags')
+    const tags = tagsParam ? tagsParam.split(',').filter(Boolean).slice(0, 10) : null
     const limitCount = parseInt(searchParams.get('limit') || '20')
 
     const videosRef = collection(db, 'videos')
 
-    const q = tag
-      ? query(videosRef, where('passed', '==', true), where('tags', 'array-contains', tag), orderBy('scoredAt', 'desc'), limit(limitCount))
-      : query(videosRef, where('passed', '==', true), orderBy('scoredAt', 'desc'), limit(limitCount))
+    const q = tags && tags.length > 0
+      ? query(videosRef, where('passed', '==', true), where('tags', 'array-contains-any', tags), orderBy('scoredAt', 'desc'), limit(limitCount))
+      : tag
+        ? query(videosRef, where('passed', '==', true), where('tags', 'array-contains', tag), orderBy('scoredAt', 'desc'), limit(limitCount))
+        : query(videosRef, where('passed', '==', true), orderBy('scoredAt', 'desc'), limit(limitCount))
 
     const snapshot = await getDocs(q)
     const videos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
 
     if (videos.length === 0) {
-      const seed = tag ? SEED_VIDEOS.filter(v => v.tags.includes(tag)) : SEED_VIDEOS
+      let seed = SEED_VIDEOS
+      if (tags && tags.length > 0) seed = SEED_VIDEOS.filter(v => v.tags.some(t => tags.includes(t)))
+      else if (tag) seed = SEED_VIDEOS.filter(v => v.tags.includes(tag))
       return NextResponse.json(seed)
     }
 

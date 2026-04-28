@@ -5,6 +5,7 @@ import Link from 'next/link'
 import VideoCard from '@/components/VideoCard'
 import TagFilter from '@/components/TagFilter'
 import AuthStatus from '@/components/AuthStatus'
+import { useAuth } from '@/context/AuthContext'
 import Footer from '@/components/Footer'
 import { HorizontalLockup } from '@/components/SpiralIcon'
 
@@ -21,15 +22,21 @@ interface Video {
 }
 
 export default function HomePage() {
+  const { profile } = useAuth()
   const [videos, setVideos] = useState<Video[]>([])
   const [activeTag, setActiveTag] = useState('')
   const [loading, setLoading] = useState(true)
   const carouselRef = useRef<HTMLDivElement>(null)
 
-  const fetchVideos = useCallback(async (tag: string) => {
+  const fetchVideos = useCallback(async (tag: string, interests?: string[]) => {
     setLoading(true)
     try {
-      const url = tag ? `/api/videos?tag=${tag}` : '/api/videos'
+      let url = '/api/videos'
+      if (tag === 'my-feed' && interests && interests.length > 0) {
+        url = `/api/videos?tags=${interests.join(',')}`
+      } else if (tag && tag !== 'my-feed') {
+        url = `/api/videos?tag=${tag}`
+      }
       const res = await fetch(url)
       const data = await res.json()
       setVideos(Array.isArray(data) ? data : [])
@@ -41,8 +48,8 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    fetchVideos(activeTag)
-  }, [activeTag, fetchVideos])
+    fetchVideos(activeTag, profile?.interests)
+  }, [activeTag, fetchVideos, profile?.interests])
 
   // reset carousel scroll on tag change
   useEffect(() => {

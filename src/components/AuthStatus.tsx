@@ -13,9 +13,12 @@ export default function AuthStatus() {
     const name = profile?.displayName || user.displayName || user.email
     return (
       <div className="flex items-center gap-3">
-        <span className="text-lg text-sand/50 hidden sm:block truncate max-w-[140px]">
+        <Link
+          href="/profile"
+          className="text-lg text-sand/50 hover:text-desert-sky transition-colors hidden sm:block truncate max-w-[140px]"
+        >
           {name}
-        </span>
+        </Link>
         <button
           onClick={() => signOut()}
           className="text-lg text-sand/40 hover:text-sand/70 transition-colors"

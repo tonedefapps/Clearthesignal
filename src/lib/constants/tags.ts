@@ -1,0 +1,24 @@
+export const CANONICAL_TAGS = [
+  'consciousness',
+  'UAP',
+  'disclosure',
+  'contact',
+  'synchronicity',
+  'energy',
+  'healing',
+  'quantum',
+  'meditation',
+  'manifestation',
+  'evolution',
+  'spirituality',
+  'philosophy',
+  'ancient wisdom',
+  'channeling',
+  'psychology',
+  'wellness',
+  'NDE',
+  'Mandela effect',
+  'awakening',
+] as const
+
+export type CanonicalTag = typeof CANONICAL_TAGS[number]

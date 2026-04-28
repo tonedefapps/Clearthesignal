@@ -6,21 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { createUserProfile } from '@/lib/firebase/users'
 import { HorizontalLockup, SpiralIcon } from '@/components/SpiralIcon'
-
-const INTEREST_OPTIONS = [
-  'consciousness',
-  'meditation',
-  'disclosure',
-  'quantum science',
-  'alternative health',
-  'wellness',
-  'spirituality',
-  'philosophy',
-  'ancient wisdom',
-  'holistic living',
-  'energy healing',
-  'psychology',
-]
+import { CANONICAL_TAGS } from '@/lib/constants/tags'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -128,7 +114,7 @@ export default function RegisterPage() {
                 <span className="text-sand/35 ml-2 normal-case">pick any that resonate</span>
               </label>
               <div className="flex flex-wrap gap-2">
-                {INTEREST_OPTIONS.map(tag => {
+                {CANONICAL_TAGS.map(tag => {
                   const active = interests.includes(tag)
                   return (
                     <button

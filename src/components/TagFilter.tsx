@@ -1,21 +1,10 @@
 'use client'
 
 import { clsx } from 'clsx'
+import { useAuth } from '@/context/AuthContext'
+import { CANONICAL_TAGS } from '@/lib/constants/tags'
 
-const TAGS = [
-  { value: '', label: 'all' },
-  { value: 'consciousness', label: 'consciousness' },
-  { value: 'UAP', label: 'UAP' },
-  { value: 'disclosure', label: 'disclosure' },
-  { value: 'synchronicity', label: 'synchronicity' },
-  { value: 'energy', label: 'energy' },
-  { value: 'manifestation', label: 'manifestation' },
-  { value: 'healing', label: 'healing' },
-  { value: 'quantum', label: 'quantum' },
-  { value: 'meditation', label: 'meditation' },
-  { value: 'contact', label: 'contact' },
-  { value: 'evolution', label: 'evolution' },
-]
+const FEED_TAGS = [{ value: '', label: 'all' }, ...CANONICAL_TAGS.map(t => ({ value: t, label: t }))]
 
 interface TagFilterProps {
   active: string
@@ -23,9 +12,25 @@ interface TagFilterProps {
 }
 
 export default function TagFilter({ active, onChange }: TagFilterProps) {
+  const { profile } = useAuth()
+  const hasInterests = profile?.interests && profile.interests.length > 0
+
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
-      {TAGS.map(tag => (
+    <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+      {hasInterests && (
+        <button
+          onClick={() => onChange('my-feed')}
+          className={clsx(
+            'text-xs px-4 py-1.5 rounded-full border transition-all duration-150 whitespace-nowrap shrink-0 tracking-wide',
+            active === 'my-feed'
+              ? 'bg-red-rock border-red-rock text-white'
+              : 'bg-mesa-light/80 border-red-rock/30 text-sand/60 hover:border-red-rock/55 hover:text-sand/90'
+          )}
+        >
+          my feed
+        </button>
+      )}
+      {FEED_TAGS.map(tag => (
         <button
           key={tag.value}
           onClick={() => onChange(tag.value)}

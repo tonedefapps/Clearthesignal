@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { getClientDb } from './client'
 
 export interface UserProfile {
@@ -15,6 +15,14 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const ref = doc(getClientDb(), 'users', uid)
   const snap = await getDoc(ref)
   return snap.exists() ? (snap.data() as UserProfile) : null
+}
+
+export async function updateUserProfile(
+  uid: string,
+  data: { displayName?: string; interests?: string[] }
+): Promise<void> {
+  const ref = doc(getClientDb(), 'users', uid)
+  await updateDoc(ref, { ...data })
 }
 
 export async function createUserProfile(
