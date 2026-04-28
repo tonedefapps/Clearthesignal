@@ -13,12 +13,12 @@ export default function AuthStatus() {
     const name = profile?.displayName || user.displayName || user.email
     return (
       <div className="flex items-center gap-3">
-        <span className="text-xs text-sand/50 hidden sm:block truncate max-w-[140px]">
+        <span className="text-lg text-sand/50 hidden sm:block truncate max-w-[140px]">
           {name}
         </span>
         <button
           onClick={() => signOut()}
-          className="text-xs text-sand/40 hover:text-sand/70 transition-colors"
+          className="text-lg text-sand/40 hover:text-sand/70 transition-colors"
         >
           sign out
         </button>
@@ -29,7 +29,7 @@ export default function AuthStatus() {
   return (
     <Link
       href="/auth"
-      className="text-sm text-sand/50 hover:text-desert-sky transition-colors"
+      className="text-lg text-sand/50 hover:text-desert-sky transition-colors"
     >
       sign in
     </Link>
