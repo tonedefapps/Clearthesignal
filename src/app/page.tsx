@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import VideoCard from '@/components/VideoCard'
 import TagFilter from '@/components/TagFilter'
 import AuthStatus from '@/components/AuthStatus'
 import Footer from '@/components/Footer'
 import { HorizontalLockup } from '@/components/SpiralIcon'
-import { ArrowDown } from 'lucide-react'
 
 interface Video {
   id: string
@@ -25,6 +24,7 @@ export default function HomePage() {
   const [videos, setVideos] = useState<Video[]>([])
   const [activeTag, setActiveTag] = useState('')
   const [loading, setLoading] = useState(true)
+  const carouselRef = useRef<HTMLDivElement>(null)
 
   const fetchVideos = useCallback(async (tag: string) => {
     setLoading(true)
@@ -44,11 +44,17 @@ export default function HomePage() {
     fetchVideos(activeTag)
   }, [activeTag, fetchVideos])
 
+  // reset carousel scroll on tag change
+  useEffect(() => {
+    carouselRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
+  }, [activeTag])
+
   return (
-    <main className="min-h-screen bg-mesa text-sand">
-      {/* Nav */}
-      <nav className="border-b border-periwinkle/20 px-6 py-4 flex items-center justify-between">
-        <HorizontalLockup height={36} />
+    <main className="min-h-screen text-white">
+
+      {/* nav */}
+      <nav className="border-b border-periwinkle/20 px-6 py-3 flex items-center justify-between backdrop-blur-sm bg-mesa/80 sticky top-0 z-10">
+        <HorizontalLockup height={48} />
         <div className="flex items-center gap-6">
           <Link href="/about" className="text-sm text-sand/50 hover:text-desert-sky transition-colors hidden sm:block">
             about
@@ -65,98 +71,97 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero */}
+      {/* hero */}
       <section className="px-6 pt-20 pb-16 max-w-4xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 text-xs text-periwinkle-light bg-periwinkle/10 border border-periwinkle/25 rounded-full px-3 py-1 mb-6">
+        <div className="inline-flex items-center gap-2 text-xs text-periwinkle-light bg-periwinkle/10 border border-periwinkle/25 rounded-full px-3 py-1 mb-8">
           <span className="w-1.5 h-1.5 bg-periwinkle rounded-full animate-pulse" />
-          AI-curated · updated daily
+          ai-curated · updated daily
         </div>
-        <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-4 leading-tight text-white">
-          Clear the Signal.
+        <h1 className="text-5xl sm:text-6xl font-medium tracking-tight mb-4 leading-tight">
+          <span className="text-desert-sky">clear the signal.</span>
           <br />
-          <span className="text-periwinkle-light">Find your frequency.</span>
+          <span className="text-red-rock">find your frequency.</span>
         </h1>
-        <p className="text-sand/60 text-lg max-w-xl mx-auto leading-relaxed">
-          We surface the signal. Consciousness, awareness, synchronicity, disclosure — filtered for substance, credibility, and tone. No noise. No fear. No agenda.
+        <p className="text-white/60 text-lg max-w-xl mx-auto leading-relaxed font-light">
+          consciousness, synchronicity, disclosure, energy — filtered for substance, credibility, and tone. no noise. no fear. no agenda.
         </p>
-        <div className="mt-8 flex items-center justify-center gap-4 flex-wrap">
-          <a
-            href="#feed"
-            className="flex items-center gap-2 bg-periwinkle hover:bg-periwinkle-light text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
-          >
-            Explore the feed <ArrowDown size={15} />
-          </a>
-          <a
-            href="https://discord.gg/placeholder"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-sand/50 hover:text-sand border border-white/15 px-6 py-3 rounded-xl transition-colors"
-          >
-            Join the community
-          </a>
-        </div>
       </section>
 
-      {/* How it works */}
+      {/* how it works */}
       <section className="px-6 pb-20 max-w-4xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             {
               step: '01',
-              title: 'We watch the noise',
-              body: 'Hundreds of videos published daily across consciousness, UAP, energy, and awareness channels.',
+              title: 'we watch the noise',
+              body: 'hundreds of videos published daily across consciousness, UAP, energy, and awareness channels.',
             },
             {
               step: '02',
-              title: 'AI scores the signal',
-              body: 'Each video is scored across novelty, credibility, tone, signal density, and timing relevance.',
+              title: 'ai scores the signal',
+              body: 'each video is scored across novelty, credibility, tone, signal density, and timing relevance.',
             },
             {
               step: '03',
-              title: 'You get the frequency',
-              body: 'Only content that passes our threshold reaches the feed. No doom, no fringe, no filler.',
+              title: 'you get the frequency',
+              body: 'only content that passes our threshold reaches the feed. no doom, no fringe, no filler.',
             },
           ].map(item => (
-            <div key={item.step} className="bg-mesa-light border border-white/8 rounded-2xl p-6">
-              <p className="text-periwinkle/60 text-xs font-bold tracking-widest mb-2">{item.step}</p>
-              <h3 className="text-white font-semibold mb-2">{item.title}</h3>
-              <p className="text-sand/50 text-sm leading-relaxed">{item.body}</p>
+            <div key={item.step} className="bg-mesa-light/70 border border-periwinkle/15 rounded-2xl p-6 backdrop-blur-sm">
+              <p className="text-periwinkle/50 text-xs tracking-widest mb-2">{item.step}</p>
+              <h3 className="text-periwinkle-light font-medium mb-2">{item.title}</h3>
+              <p className="text-white/50 text-sm leading-relaxed">{item.body}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Feed */}
-      <section id="feed" className="px-6 pb-24 max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <h2 className="text-xl font-bold text-white">Curated feed</h2>
+      {/* feed */}
+      <section id="feed" className="pb-24">
+        {/* filter pills */}
+        <div className="px-6 mb-6 max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm text-sand/40 tracking-widest">the signal</h2>
+          </div>
           <TagFilter active={activeTag} onChange={setActiveTag} />
         </div>
 
+        {/* carousel */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-mesa-light border border-white/10 rounded-2xl overflow-hidden animate-pulse">
-                <div className="aspect-video bg-white/8" />
+          <div
+            className="flex gap-4 overflow-x-auto px-6"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="w-[270px] sm:w-[300px] shrink-0 bg-mesa-light/70 border border-periwinkle/15 rounded-2xl overflow-hidden animate-pulse"
+              >
+                <div className="aspect-video bg-white/5" />
                 <div className="p-4 flex flex-col gap-3">
                   <div className="h-4 bg-white/8 rounded w-3/4" />
-                  <div className="h-3 bg-white/8 rounded w-1/2" />
-                  <div className="h-3 bg-white/8 rounded w-full" />
+                  <div className="h-3 bg-white/5 rounded w-1/2" />
+                  <div className="h-3 bg-white/5 rounded w-1/3" />
                 </div>
               </div>
             ))}
           </div>
         ) : videos.length === 0 ? (
-          <div className="text-center py-24 text-sand/30">
-            <div className="mx-auto mb-4 opacity-30 w-8 h-8 border border-sand/30 rounded-full" />
-            <p className="text-lg font-medium">No signal yet</p>
-            <p className="text-sm mt-1">The pipeline runs daily — check back soon.</p>
+          <div className="text-center py-24 px-6">
+            <p className="text-periwinkle/40 text-lg font-light tracking-wide">no signal yet</p>
+            <p className="text-sand/25 text-sm mt-2">the pipeline runs daily — check back soon.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div
+            ref={carouselRef}
+            className="flex gap-4 overflow-x-auto px-6 pb-4"
+            style={{ scrollbarWidth: 'none', scrollSnapType: 'x mandatory' }}
+          >
             {videos.map(video => (
               <VideoCard key={video.id} {...video} />
             ))}
+            {/* end padding */}
+            <div className="w-2 shrink-0" />
           </div>
         )}
       </section>
