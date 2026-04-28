@@ -197,8 +197,8 @@ export default function AboutPage() {
           <h2 className="text-2xl font-medium text-periwinkle-light mb-6">what we will never do</h2>
           <div className="flex flex-col gap-4 text-white/80 leading-relaxed">
             <p>
-              clear the signal will always be free. no paywalls. no premium tiers. no content
-              locked behind a subscription. the signal is for everyone or it&rsquo;s for no one.
+              we will never put the signal behind a paywall to benefit ourselves at the expense
+              of the community.
             </p>
             <p>
               we will never amplify fear, unfalsifiable claims, or content designed to divide.
