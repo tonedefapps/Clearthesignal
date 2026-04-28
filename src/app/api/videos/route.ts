@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb, collection, query, where, orderBy, limit, getDocs } from '@/lib/firebase/server'
+import { SEED_VIDEOS } from '@/lib/seed/hardcodedVideos'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,11 @@ export async function GET(req: NextRequest) {
 
     const snapshot = await getDocs(q)
     const videos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+
+    if (videos.length === 0) {
+      const seed = tag ? SEED_VIDEOS.filter(v => v.tags.includes(tag)) : SEED_VIDEOS
+      return NextResponse.json(seed)
+    }
 
     return NextResponse.json(videos)
   } catch (error) {
