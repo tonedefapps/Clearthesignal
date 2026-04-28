@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- background -->
+  <rect width="120" height="120" rx="28" fill="#1e1e35"/>
+
+  <!-- spiral -->
+  <path
+    d="M 71 60 C 71 53 60 46 52 50 C 41 55 38 67 43 77 C 48 88 61 91 71 86 C 85 79 88 63 82 50 C 75 35 59 30 44 36 C 26 43 20 62 27 80 C 35 100 57 107 78 100 C 102 91 110 66 101 44"
+    stroke="#6b6fad" stroke-width="2.8" stroke-linecap="round" opacity="0.90"
+  />
+
+  <!-- red-rock tail -->
+  <path
+    d="M 101 44 C 108 34 113 24 116 14"
+    stroke="#c4673a" stroke-width="2.4" stroke-linecap="round" opacity="0.95"
+  />
+  <circle cx="116" cy="14" r="3.5" fill="#c4673a" opacity="0.95"/>
+
+  <!-- node dots -->
+  <circle cx="71"  cy="60"  r="3"   fill="#a8c4e0" opacity="0.95"/>
+  <circle cx="43"  cy="77"  r="3"   fill="#a8c4e0" opacity="0.95"/>
+  <circle cx="80"  cy="60"  r="3"   fill="#a8c4e0" opacity="0.92"/>
+  <circle cx="30"  cy="60"  r="3"   fill="#a8c4e0" opacity="0.90"/>
+  <circle cx="101" cy="44"  r="2.6" fill="#a8c4e0" opacity="0.88"/>
+
+  <!-- center -->
+  <circle cx="60" cy="60" r="12"  fill="#1e1e35"/>
+  <circle cx="60" cy="60" r="9"   fill="#6b6fad" opacity="0.20"/>
+  <circle cx="60" cy="60" r="5.5" fill="#8f93c9" opacity="0.60"/>
+  <circle cx="60" cy="60" r="2.5" fill="#a8c4e0" opacity="0.98"/>
+</svg>
