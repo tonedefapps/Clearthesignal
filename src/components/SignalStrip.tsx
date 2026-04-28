@@ -9,7 +9,7 @@ export default function SignalStrip() {
   const [posts, setPosts] = useState<SignalPost[]>([])
 
   useEffect(() => {
-    getSignalPosts(undefined, 6).then(setPosts).catch(() => setPosts([]))
+    getSignalPosts(undefined, 3).then(setPosts).catch(() => setPosts([]))
   }, [])
 
   if (posts.length === 0) return null

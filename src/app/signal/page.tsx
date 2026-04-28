@@ -10,18 +10,32 @@ import { getSignalPosts, type SignalPost } from '@/lib/firebase/signal'
 import { CANONICAL_TAGS } from '@/lib/constants/tags'
 import { clsx } from 'clsx'
 
+const PAGE_SIZE = 10
+
 export default function SignalPage() {
-  const [posts, setPosts] = useState<SignalPost[]>([])
+  const [allPosts, setAllPosts] = useState<SignalPost[]>([])
   const [activeTag, setActiveTag] = useState('')
+  const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setLoading(true)
-    getSignalPosts(activeTag || undefined, 50)
-      .then(setPosts)
-      .catch(() => setPosts([]))
+    getSignalPosts(activeTag || undefined, 100)
+      .then(setAllPosts)
+      .catch(() => setAllPosts([]))
       .finally(() => setLoading(false))
   }, [activeTag])
+
+  // reset to first page on tag change
+  useEffect(() => { setPage(0) }, [activeTag])
+
+  const totalPages = Math.ceil(allPosts.length / PAGE_SIZE)
+  const pagePosts = allPosts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
+  function handleTag(tag: string) {
+    setActiveTag(tag)
+    setPage(0)
+  }
 
   return (
     <main className="min-h-screen text-white">
@@ -47,11 +61,13 @@ export default function SignalPage() {
       </section>
 
       <section className="pb-24 max-w-7xl mx-auto px-6">
+
+        {/* tag filter */}
         <div className="flex gap-2 overflow-x-auto pb-4 mb-8" style={{ scrollbarWidth: 'none' }}>
           {[{ value: '', label: 'all' }, ...CANONICAL_TAGS.map(t => ({ value: t, label: t }))].map(tag => (
             <button
               key={tag.value}
-              onClick={() => setActiveTag(tag.value)}
+              onClick={() => handleTag(tag.value)}
               className={clsx(
                 'text-xs px-4 py-1.5 rounded-full border transition-all duration-150 whitespace-nowrap shrink-0 tracking-wide',
                 activeTag === tag.value
@@ -64,26 +80,66 @@ export default function SignalPage() {
           ))}
         </div>
 
+        {/* posts */}
         {loading ? (
-          <div className="flex gap-4 flex-wrap">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="w-[300px] h-[200px] bg-mesa-light/70 border border-periwinkle/15 rounded-2xl animate-pulse" />
+              <div key={i} className="h-[200px] bg-mesa-light/70 border border-periwinkle/15 rounded-2xl animate-pulse" />
             ))}
           </div>
-        ) : posts.length === 0 ? (
+        ) : pagePosts.length === 0 ? (
           <div className="text-center py-24">
             <p className="text-periwinkle/40 text-lg font-light">no dispatch posts yet</p>
             <p className="text-sand/25 text-sm mt-2">check back soon.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {posts.map(post => (
+            {pagePosts.map(post => (
               <div key={post.id} className="w-full">
                 <SignalCard post={post} />
               </div>
             ))}
           </div>
         )}
+
+        {/* pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-10 pt-6 border-t border-periwinkle/10">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="flex items-center gap-2 text-sm text-sand/50 hover:text-sand/80 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+            >
+              ← previous
+            </button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i)}
+                  className={clsx(
+                    'w-7 h-7 rounded-full text-xs transition-all',
+                    i === page
+                      ? 'bg-periwinkle text-white'
+                      : 'text-sand/40 hover:text-sand/70'
+                  )}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page === totalPages - 1}
+              className="flex items-center gap-2 text-sm text-sand/50 hover:text-sand/80 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+            >
+              next →
+            </button>
+          </div>
+        )}
+
       </section>
 
       <Footer />
