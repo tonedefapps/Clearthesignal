@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Videos: anyone can read, only authenticated server pipeline can write
+    match /videos/{videoId} {
+      allow read: if true;
+      allow write: if false; // writes only happen server-side via client SDK with API key
+    }
+
+    // User profiles: users can read/write their own doc
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

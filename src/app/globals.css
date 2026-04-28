@@ -1,23 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap');
 @import "tailwindcss";
 
 @theme inline {
-  /* Sedona palette */
-  --color-mesa:        #1e1e35;   /* deep background */
-  --color-mesa-light:  #26263f;   /* card/surface */
-  --color-periwinkle:  #6b6fad;   /* primary interactive */
-  --color-periwinkle-light: #8f93c9; /* hover / lighter variant */
-  --color-redrock:     #c4673a;   /* accent / alert */
-  --color-redrock-light: #d4845a; /* hover */
-  --color-sky-desert:  #a8c4e0;   /* secondary text / highlight */
-  --color-sand:        #d4c4a8;   /* warm neutral / body text */
-  --color-white:       #ffffff;
+  /* backgrounds */
+  --color-mesa:             #1e1e35;
+  --color-deep-mesa:        #1e1e35;
+  --color-mesa-light:       #26263f;
+
+  /* brand primaries */
+  --color-periwinkle:       #6b6fad;
+  --color-periwinkle-light: #8f93c9;
+
+  /* accent */
+  --color-redrock:          #c4673a;
+  --color-red-rock:         #c4673a;
+  --color-redrock-light:    #d4845a;
+  --color-red-rock-light:   #d4845a;
+
+  /* text & highlights */
+  --color-sky-desert:       #a8c4e0;
+  --color-desert-sky:       #a8c4e0;
+  --color-sand:             #d4c4a8;
+  --color-adobe-sand:       #d4c4a8;
+  --color-white:            #ffffff;
+
+  /* font */
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+
+  /* type scale */
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.125rem;
+  --text-xl:   1.25rem;
+  --text-2xl:  1.5rem;
+  --text-3xl:  1.875rem;
+  --text-4xl:  2.25rem;
+  --text-5xl:  3rem;
+
+  /* spacing */
+  --spacing-1:  0.25rem;
+  --spacing-2:  0.5rem;
+  --spacing-3:  0.75rem;
+  --spacing-4:  1rem;
+  --spacing-6:  1.5rem;
+  --spacing-8:  2rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+  --spacing-24: 6rem;
+
+  /* radii */
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   16px;
+  --radius-xl:   24px;
+  --radius-full: 9999px;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
 body {
   background-color: #1e1e35;
-  color: #d4c4a8;
+  color: #ffffff;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, nav a, button, .label {
+  text-transform: lowercase;
+}
+
+p, li, td {
+  text-transform: none;
 }

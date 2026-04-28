@@ -1,6 +1,20 @@
 import { initializeApp, getApps } from 'firebase/app'
-import { getFirestore } from 'firebase/firestore'
-import { getAuth } from 'firebase/auth'
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
+  serverTimestamp,
+  DocumentData,
+  Query,
+  CollectionReference,
+} from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,10 +29,9 @@ function getApp() {
   return getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
 }
 
-export function getClientDb() {
+export function getDb() {
   return getFirestore(getApp())
 }
 
-export function getClientAuth() {
-  return getAuth(getApp())
-}
+export { doc, getDoc, setDoc, collection, query, where, orderBy, limit, getDocs, serverTimestamp }
+export type { DocumentData, Query, CollectionReference }

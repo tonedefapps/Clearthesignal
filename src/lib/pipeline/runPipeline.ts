@@ -1,9 +1,9 @@
 import { fetchRecentVideos } from '@/lib/youtube/fetchVideos'
 import { scoreVideo } from '@/lib/scoring/scoreVideo'
-import { adminDb } from '@/lib/firebase/admin'
-import { FieldValue } from 'firebase-admin/firestore'
+import { getDb, doc, getDoc, setDoc, serverTimestamp } from '@/lib/firebase/server'
 
 export async function runCurationPipeline() {
+  const db = getDb()
   console.log('Fetching recent videos...')
   const videos = await fetchRecentVideos()
   console.log(`Found ${videos.length} videos to score`)
@@ -12,8 +12,9 @@ export async function runCurationPipeline() {
   let failed = 0
 
   for (const video of videos) {
-    const existing = await adminDb.collection('videos').doc(video.videoId).get()
-    if (existing.exists) {
+    const ref = doc(db, 'videos', video.videoId)
+    const existing = await getDoc(ref)
+    if (existing.exists()) {
       console.log(`Skipping already scored: ${video.title}`)
       continue
     }
@@ -26,7 +27,7 @@ export async function runCurationPipeline() {
       video.publishedAt
     )
 
-    await adminDb.collection('videos').doc(video.videoId).set({
+    await setDoc(ref, {
       ...video,
       scores: {
         novelty: scorecard.novelty,
@@ -39,7 +40,7 @@ export async function runCurationPipeline() {
       scoreRationale: scorecard.rationale,
       passed: scorecard.passed,
       tags: scorecard.tags,
-      scoredAt: FieldValue.serverTimestamp(),
+      scoredAt: serverTimestamp(),
     })
 
     scorecard.passed ? passed++ : failed++

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <rect width="120" height="120" rx="16" fill="#c4673a"/>
+  <!-- noise stars -->
+  <circle cx="18" cy="18" r="1.1" fill="#1e1e35" opacity="0.18"/>
+  <circle cx="95" cy="14" r="0.8" fill="#1e1e35" opacity="0.14"/>
+  <circle cx="106" cy="98" r="1" fill="#1e1e35" opacity="0.15"/>
+  <circle cx="12" cy="98" r="0.8" fill="#1e1e35" opacity="0.13"/>
+  <!-- spiral body -->
+  <g transform="translate(-61.111111111111114,-784.4444444444445) scale(1.1111111111111112)">
+    <path d="M 117 760 C 117 753 109 747 103 750 C 95 754 92 763 96 770 C 100 778 110 780 117 776 C 126 770 128 760 122 752 C 117 743 106 740 96 743 C 84 747 78 759 82 772 C 86 786 99 792 113 789 C 129 786 138 771 135 756 C 132 739 118 730 102 731"
+      fill="none" stroke="#1e1e35" stroke-width="1.26" stroke-linecap="round" opacity="0.88"/>
+    <!-- arm — 2 o'clock upper right -->
+    <path d="M 102 731 C 109 723 116 715 119 707"
+      fill="none" stroke="#d4c4a8" stroke-width="1.17" stroke-linecap="round" opacity="0.95"/>
+    <circle cx="119" cy="707" r="1.98" fill="#d4c4a8" opacity="0.95"/>
+    <!-- orb center — warm red rock glow, rendered BEFORE stars so stars sit on top -->
+    <circle cx="109" cy="760" r="8.10"   fill="#c4673a" opacity="0.08"/>
+    <circle cx="109" cy="760" r="5.85" fill="#c4673a" opacity="0.16"/>
+    <circle cx="109" cy="760" r="3.60"   fill="#d4845a" opacity="0.55"/>
+    <circle cx="109" cy="760" r="1.62" fill="#f0e8e0" opacity="0.95"/>
+    <!-- revealed star nodes — rendered AFTER orb, always on top -->
+    <circle cx="117" cy="760" r="1.98" fill="#d4c4a8" opacity="0.95"/>
+    <circle cx="109" cy="751" r="1.71" fill="#d4c4a8" opacity="0.85"/>
+    <circle cx="96"  cy="770" r="1.89" fill="#d4c4a8" opacity="0.92"/>
+    <circle cx="109" cy="780" r="1.71" fill="#d4c4a8" opacity="0.85"/>
+    <circle cx="123" cy="760" r="1.89" fill="#d4c4a8" opacity="0.92"/>
+    <circle cx="109" cy="740" r="1.71" fill="#d4c4a8" opacity="0.82"/>
+    <circle cx="135" cy="760" r="1.89" fill="#d4c4a8" opacity="0.85"/>
+    <circle cx="102" cy="731" r="1.71" fill="#d4c4a8" opacity="0.82"/>
+  </g>
+</svg>

@@ -1,5 +1,6 @@
-import { adminDb } from '@/lib/firebase/admin'
+import { getDb, doc, getDoc } from '@/lib/firebase/server'
 import ScoreDimension from '@/components/ScoreDimension'
+import AuthStatus from '@/components/AuthStatus'
 import { Radio, ArrowLeft, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -12,11 +13,13 @@ interface PageProps {
 
 export default async function VideoDetailPage({ params }: PageProps) {
   const { id } = await params
+  const db = getDb()
 
-  const doc = await adminDb.collection('videos').doc(id).get()
-  if (!doc.exists) notFound()
+  const ref = doc(db, 'videos', id)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) notFound()
 
-  const video = doc.data()!
+  const video = snap.data()!
 
   const dimensions = [
     { key: 'novelty',         label: 'Novelty',          description: 'How fresh and original the perspective is' },
@@ -37,13 +40,15 @@ export default async function VideoDetailPage({ params }: PageProps) {
           <Radio size={20} className="text-periwinkle" />
           <span className="font-bold text-white tracking-tight">Clear the Signal</span>
         </div>
-        <Link href="/" className="text-sm text-sand/50 hover:text-sand transition-colors flex items-center gap-1">
-          <ArrowLeft size={14} /> feed
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/" className="text-sm text-sand/50 hover:text-sand transition-colors flex items-center gap-1">
+            <ArrowLeft size={14} /> feed
+          </Link>
+          <AuthStatus />
+        </div>
       </nav>
 
       <div className="max-w-4xl mx-auto px-6 py-12">
-        {/* YouTube embed */}
         <div className="aspect-video rounded-2xl overflow-hidden mb-8 bg-black">
           <iframe
             src={`https://www.youtube.com/embed/${id}`}
@@ -55,7 +60,6 @@ export default async function VideoDetailPage({ params }: PageProps) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left: video info */}
           <div className="lg:col-span-2 flex flex-col gap-6">
             <div>
               <h1 className="text-2xl font-bold leading-snug mb-2 text-white">{video.title}</h1>
@@ -94,7 +98,6 @@ export default async function VideoDetailPage({ params }: PageProps) {
             )}
           </div>
 
-          {/* Right: scorecard */}
           <div className="bg-mesa-light border border-white/8 rounded-2xl p-5 flex flex-col gap-5 h-fit">
             <div className="flex items-baseline justify-between">
               <p className="text-xs text-sand/40 font-bold tracking-widest uppercase">Signal Score</p>

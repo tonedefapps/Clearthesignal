@@ -1,9 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import VideoCard from '@/components/VideoCard'
 import TagFilter from '@/components/TagFilter'
-import { Radio, ArrowDown } from 'lucide-react'
+import AuthStatus from '@/components/AuthStatus'
+import Footer from '@/components/Footer'
+import { HorizontalLockup } from '@/components/SpiralIcon'
+import { ArrowDown } from 'lucide-react'
 
 interface Video {
   id: string
@@ -43,19 +47,22 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-mesa text-sand">
       {/* Nav */}
-      <nav className="border-b border-white/8 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <Radio size={20} className="text-periwinkle" />
-          <span className="font-bold text-white tracking-tight">Clear the Signal</span>
+      <nav className="border-b border-periwinkle/20 px-6 py-4 flex items-center justify-between">
+        <HorizontalLockup height={36} />
+        <div className="flex items-center gap-6">
+          <Link href="/about" className="text-sm text-sand/50 hover:text-desert-sky transition-colors hidden sm:block">
+            about
+          </Link>
+          <a
+            href="https://discord.gg/placeholder"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-sand/50 hover:text-sand transition-colors hidden sm:block"
+          >
+            community →
+          </a>
+          <AuthStatus />
         </div>
-        <a
-          href="https://discord.gg/placeholder"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-sand/50 hover:text-sand transition-colors"
-        >
-          community →
-        </a>
       </nav>
 
       {/* Hero */}
@@ -141,7 +148,7 @@ export default function HomePage() {
           </div>
         ) : videos.length === 0 ? (
           <div className="text-center py-24 text-sand/30">
-            <Radio size={32} className="mx-auto mb-4 opacity-30" />
+            <div className="mx-auto mb-4 opacity-30 w-8 h-8 border border-sand/30 rounded-full" />
             <p className="text-lg font-medium">No signal yet</p>
             <p className="text-sm mt-1">The pipeline runs daily — check back soon.</p>
           </div>
@@ -154,12 +161,7 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-white/8 px-6 py-8 text-center">
-        <p className="text-sand/30 text-sm">
-          Clear the Signal · curated by AI · no cloud, no agenda, no noise
-        </p>
-      </footer>
+      <Footer />
     </main>
   )
 }

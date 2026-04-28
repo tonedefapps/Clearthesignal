@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="260">
+  <rect width="280" height="260" fill="#1e1e35"/>
+  <circle cx="30"  cy="28"  r="0.9" fill="#d4c4a8" opacity="0.16"/>
+  <circle cx="248" cy="22"  r="0.7" fill="#d4c4a8" opacity="0.13"/>
+  <circle cx="255" cy="215" r="0.8" fill="#d4c4a8" opacity="0.14"/>
+  <circle cx="18"  cy="210" r="0.7" fill="#d4c4a8" opacity="0.13"/>
+  <!-- icon centered top -->
+  <g transform="translate(85,10)">
+    <g transform="translate(-56.018518518518526,-719.0740740740741) scale(1.0185185185185186)">
+      <path d="M 117 760 C 117 753 109 747 103 750 C 95 754 92 763 96 770 C 100 778 110 780 117 776 C 126 770 128 760 122 752 C 117 743 106 740 96 743 C 84 747 78 759 82 772 C 86 786 99 792 113 789 C 129 786 138 771 135 756 C 132 739 118 730 102 731"
+        fill="none" stroke="#6b6fad" stroke-width="1.37" stroke-linecap="round" opacity="0.88"/>
+      <path d="M 102 731 C 109 723 116 715 119 707"
+        fill="none" stroke="#c4673a" stroke-width="1.28" stroke-linecap="round" opacity="0.95"/>
+      <circle cx="119" cy="707" r="2.16" fill="#c4673a" opacity="0.95"/>
+      <circle cx="117" cy="760" r="2.16" fill="#a8c4e0" opacity="0.95"/>
+      <circle cx="109" cy="751" r="1.87" fill="#a8c4e0" opacity="0.85"/>
+      <circle cx="96"  cy="770" r="2.06" fill="#a8c4e0" opacity="0.92"/>
+      <circle cx="109" cy="780" r="1.87" fill="#a8c4e0" opacity="0.85"/>
+      <circle cx="123" cy="760" r="2.06" fill="#a8c4e0" opacity="0.92"/>
+      <circle cx="109" cy="740" r="1.87" fill="#a8c4e0" opacity="0.82"/>
+      <circle cx="135" cy="760" r="2.06" fill="#a8c4e0" opacity="0.85"/>
+      <circle cx="102" cy="731" r="1.87" fill="#a8c4e0" opacity="0.82"/>
+      <!-- orb — warm glow, behind stars -->
+      <circle cx="109" cy="760" r="8.84"   fill="#c4673a" opacity="0.08"/>
+      <circle cx="109" cy="760" r="6.38" fill="#c4673a" opacity="0.16"/>
+      <circle cx="109" cy="760" r="3.93"   fill="#d4845a" opacity="0.55"/>
+      <circle cx="109" cy="760" r="1.77" fill="#f0e8e0" opacity="0.95"/>
+      <!-- stars on top of orb -->
+      <circle cx="117" cy="760" r="2.16" fill="#a8c4e0" opacity="0.95"/>
+      <circle cx="109" cy="751" r="1.87" fill="#a8c4e0" opacity="0.85"/>
+      <circle cx="96"  cy="770" r="2.06" fill="#a8c4e0" opacity="0.92"/>
+      <circle cx="109" cy="780" r="1.87" fill="#a8c4e0" opacity="0.85"/>
+      <circle cx="123" cy="760" r="2.06" fill="#a8c4e0" opacity="0.92"/>
+      <circle cx="109" cy="740" r="1.87" fill="#a8c4e0" opacity="0.82"/>
+      <circle cx="135" cy="760" r="2.06" fill="#a8c4e0" opacity="0.85"/>
+      <circle cx="102" cy="731" r="1.87" fill="#a8c4e0" opacity="0.82"/>
+    </g>
+  </g>
+  <!-- wordmark centered below -->
+  <text x="140" y="152"
+    font-family="system-ui, sans-serif"
+    font-size="13" font-weight="400"
+    fill="#a8c4e0" letter-spacing="6" text-anchor="middle">clear the</text>
+  <text x="140" y="192"
+    font-family="system-ui, sans-serif"
+    font-size="36" font-weight="500"
+    fill="#c4673a" letter-spacing="2" text-anchor="middle">signal</text>
+  <text x="140" y="220"
+    font-family="system-ui, sans-serif"
+    font-size="11" font-weight="300"
+    fill="#d4c4a8" letter-spacing="4" text-anchor="middle" opacity="0.7">find your frequency.</text>
+</svg>
