@@ -60,6 +60,8 @@ export const DEFAULT_SEARCH_QUERIES = [
   'Theories of Everything Curt Jaimungal',
   'Coast to Coast AM UAP',
   'After Skool consciousness',
+  // Neuro / Psychology
+  'Mayim Bialik neuroscience consciousness',
   // Thematic
   'UAP disclosure Congress 2025',
   'NDE near death experience science 2025',
