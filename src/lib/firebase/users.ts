@@ -1,6 +1,14 @@
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { getClientDb } from './client'
 
+const ADMIN_EMAILS = [
+  'beacon@clearthesignal.com',
+  'jcable@gmail.com',
+  'scott.fowler@gmail.com',
+  'scott@tonedefapps.com',
+  'jon.e.rock@gmail.com',
+]
+
 export interface UserProfile {
   uid: string
   displayName: string
@@ -31,6 +39,8 @@ export async function createUserProfile(
   data: { displayName: string; email: string | null; photoURL: string | null; interests: string[] }
 ): Promise<void> {
   const ref = doc(getClientDb(), 'users', uid)
+  const role = data.email && ADMIN_EMAILS.includes(data.email) ? 'admin' : 'user'
+
   await setDoc(ref, {
     uid,
     displayName: data.displayName,
@@ -39,5 +49,6 @@ export async function createUserProfile(
     interests: data.interests,
     joinedAt: serverTimestamp(),
     profileComplete: true,
+    role,
   })
 }
