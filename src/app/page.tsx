@@ -30,6 +30,7 @@ export default function HomePage() {
   const carouselRef = useRef<HTMLDivElement>(null)
   const [atStart, setAtStart] = useState(true)
   const [atEnd, setAtEnd] = useState(false)
+  const [isOverflowing, setIsOverflowing] = useState(false)
 
   function handleScroll() {
     const el = carouselRef.current
@@ -37,6 +38,20 @@ export default function HomePage() {
     setAtStart(el.scrollLeft < 16)
     setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 16)
   }
+
+  useEffect(() => {
+    const el = carouselRef.current
+    if (!el) return
+    const check = () => {
+      const overflow = el.scrollWidth > el.clientWidth + 8
+      setIsOverflowing(overflow)
+      if (!overflow) { setAtStart(true); setAtEnd(true) }
+    }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [videos])
 
   const fetchVideos = useCallback(async (tag: string, interests?: string[]) => {
     setLoading(true)
@@ -188,7 +203,7 @@ export default function HomePage() {
             <div
               ref={carouselRef}
               onScroll={handleScroll}
-              className="flex gap-4 overflow-x-auto px-6 pb-4"
+              className={`flex gap-4 overflow-x-auto px-6 pb-4 ${!isOverflowing ? 'justify-center' : ''}`}
               style={{ scrollbarWidth: 'none', scrollSnapType: 'x mandatory' }}
             >
               {videos.map(video => (
