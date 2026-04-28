@@ -58,7 +58,7 @@ export default function Footer() {
         </div>
 
         {/* tagline */}
-        <p className="text-sand/35 text-xs tracking-widest text-center">
+        <p className="text-red-rock/50 text-xs tracking-widest text-center">
           clear the signal · curated, not algorithmic · no fear, no fringe, no upsell
         </p>
 
