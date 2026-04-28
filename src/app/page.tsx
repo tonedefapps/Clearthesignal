@@ -28,6 +28,15 @@ export default function HomePage() {
   const [activeTag, setActiveTag] = useState('')
   const [loading, setLoading] = useState(true)
   const carouselRef = useRef<HTMLDivElement>(null)
+  const [atStart, setAtStart] = useState(true)
+  const [atEnd, setAtEnd] = useState(false)
+
+  function handleScroll() {
+    const el = carouselRef.current
+    if (!el) return
+    setAtStart(el.scrollLeft < 16)
+    setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 16)
+  }
 
   const fetchVideos = useCallback(async (tag: string, interests?: string[]) => {
     setLoading(true)
@@ -165,16 +174,28 @@ export default function HomePage() {
             <p className="text-sand/25 text-sm mt-2">the pipeline runs daily — check back soon.</p>
           </div>
         ) : (
-          <div
-            ref={carouselRef}
-            className="flex gap-4 overflow-x-auto px-6 pb-4"
-            style={{ scrollbarWidth: 'none', scrollSnapType: 'x mandatory' }}
-          >
-            {videos.map(video => (
-              <VideoCard key={video.id} {...video} />
-            ))}
-            {/* end padding */}
-            <div className="w-2 shrink-0" />
+          <div className="relative">
+            {/* left fade */}
+            {!atStart && (
+              <div className="absolute left-0 top-0 bottom-4 w-24 z-10 pointer-events-none"
+                style={{ background: 'linear-gradient(to right, #1e1e35 0%, transparent 100%)' }} />
+            )}
+            {/* right fade */}
+            {!atEnd && (
+              <div className="absolute right-0 top-0 bottom-4 w-24 z-10 pointer-events-none"
+                style={{ background: 'linear-gradient(to left, #1e1e35 0%, transparent 100%)' }} />
+            )}
+            <div
+              ref={carouselRef}
+              onScroll={handleScroll}
+              className="flex gap-4 overflow-x-auto px-6 pb-4"
+              style={{ scrollbarWidth: 'none', scrollSnapType: 'x mandatory' }}
+            >
+              {videos.map(video => (
+                <VideoCard key={video.id} {...video} />
+              ))}
+              <div className="w-2 shrink-0" />
+            </div>
           </div>
         )}
       </section>
