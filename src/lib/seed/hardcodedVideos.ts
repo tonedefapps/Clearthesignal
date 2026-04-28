@@ -46,10 +46,10 @@ export const SEED_VIDEOS = [
   },
   {
     id: 'seed-5',
-    title: 'The Science of Miracles — Gregg Braden',
+    title: 'The Surprising Science of Heart Intelligence — Gregg Braden',
     channelName: 'Gregg Braden Official',
-    thumbnailUrl: 'https://img.youtube.com/vi/otdAAm30lT0/hqdefault.jpg',
-    youtubeUrl: 'https://www.youtube.com/watch?v=otdAAm30lT0',
+    thumbnailUrl: 'https://img.youtube.com/vi/XC7i7REgTOQ/hqdefault.jpg',
+    youtubeUrl: 'https://www.youtube.com/watch?v=XC7i7REgTOQ',
     scores: { overall: 4.2 },
     scoreRationale: 'Braden synthesizes ancient wisdom and modern science around the heart\'s electromagnetic field and its relationship to collective healing.',
     tags: ['energy', 'healing', 'consciousness'],
