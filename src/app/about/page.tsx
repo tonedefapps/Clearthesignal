@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { HorizontalLockup, SpiralIcon } from '@/components/SpiralIcon'
-import AuthStatus from '@/components/AuthStatus'
+import { SpiralIcon } from '@/components/SpiralIcon'
 import Footer from '@/components/Footer'
+import SiteNav from '@/components/SiteNav'
 
 export const metadata = {
-  title: 'about — clear the signal',
+  title: 'about | clear the signal',
   description: 'clear the signal is a free, community-powered platform dedicated to the positive exploration of human consciousness, synchronicity, contact phenomena, and collective evolution.',
 }
 
@@ -15,7 +15,7 @@ const beliefs = [
   },
   {
     heading: 'the pattern already exists',
-    body: 'the spiral was always in the stars. we\'re not inventing a new conversation — we\'re clearing enough noise to see the one that\'s been there all along.',
+    body: 'the spiral was always in the stars. we\'re not inventing a new conversation. we\'re clearing enough noise to see the one that\'s been there all along.',
   },
   {
     heading: 'radical positivity is a choice',
@@ -23,7 +23,7 @@ const beliefs = [
   },
   {
     heading: 'you\'re not alone in this',
-    body: 'whatever you\'ve noticed. whatever you\'ve experienced. whatever question won\'t leave you alone. there is a community of people having the same conversation — carefully, seriously, with open minds and grounded hearts.',
+    body: 'whatever you\'ve noticed. whatever you\'ve experienced. whatever question won\'t leave you alone. there is a community of people having the same conversation: carefully, seriously, with open minds and grounded hearts.',
   },
 ]
 
@@ -39,21 +39,7 @@ export default function AboutPage() {
   return (
     <main className="min-h-screen bg-mesa text-white">
 
-      {/* nav */}
-      <nav className="border-b border-periwinkle/20 px-6 py-4 flex items-center justify-between">
-        <Link href="/">
-          <HorizontalLockup height={36} />
-        </Link>
-        <div className="flex items-center gap-6">
-          <Link href="/" className="text-sm text-sand/50 hover:text-desert-sky transition-colors">
-            feed
-          </Link>
-          <Link href="/about" className="text-sm text-periwinkle-light">
-            about
-          </Link>
-          <AuthStatus />
-        </div>
-      </nav>
+      <SiteNav />
 
       {/* hero */}
       <section className="relative overflow-hidden border-b border-periwinkle/15 px-6 py-24 text-center">
@@ -108,7 +94,7 @@ export default function AboutPage() {
           <p className="text-lg text-white leading-relaxed border-l-2 border-periwinkle/40 pl-6">
             clear the signal is a free, community-powered platform dedicated to the positive
             exploration of human consciousness, synchronicity, contact phenomena, and collective
-            evolution. we curate the signal from the noise — surfacing credible voices, real
+            evolution. we curate the signal from the noise, surfacing credible voices, real
             research, and genuine experience from a community of people who are quietly, seriously
             asking the biggest questions available to a human being.{' '}
             <span className="text-desert-sky">no fear. no fringe. no upsell.</span>{' '}
@@ -125,7 +111,7 @@ export default function AboutPage() {
               we couldn&rsquo;t walk away from.
             </p>
             <p>
-              we&rsquo;d all been following this space for years — the research, the voices, the
+              we&rsquo;d all been following this space for years: the research, the voices, the
               events, the experiences. we believed in it. we still do. but we kept running into
               the same problem: for every piece of content that genuinely moved the conversation
               forward, there were twenty more that recycled the same events, leaned into fear,
@@ -147,8 +133,8 @@ export default function AboutPage() {
             <p>
               we watch the full landscape of content across consciousness research, uap phenomena,
               synchronicity, manifestation, healing, and collective evolution. we score it. we
-              filter it. we surface what&rsquo;s actually moving the conversation forward — new
-              information, credible voices, genuine experience — and we let everything else pass.
+              filter it. we surface what&rsquo;s actually moving the conversation forward: new
+              information, credible voices, genuine experience. everything else passes.
             </p>
             <p>
               the scoring is transparent. the criteria are published. the curation is human,
@@ -221,7 +207,7 @@ export default function AboutPage() {
             <p>
               you don&rsquo;t have to qualify your experiences or defend your curiosity. you
               don&rsquo;t have to pretend you haven&rsquo;t noticed what you&rsquo;ve noticed.
-              you don&rsquo;t have to be certain — about any of it.
+              you don&rsquo;t have to be certain. about any of it.
             </p>
             <p>you just have to be willing to look.</p>
           </div>

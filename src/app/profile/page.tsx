@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { updateUserProfile } from '@/lib/firebase/users'
-import { HorizontalLockup, SpiralIcon } from '@/components/SpiralIcon'
-import AuthStatus from '@/components/AuthStatus'
+import { SpiralIcon } from '@/components/SpiralIcon'
 import { CANONICAL_TAGS } from '@/lib/constants/tags'
 import Footer from '@/components/Footer'
+import SiteNav from '@/components/SiteNav'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -68,20 +68,7 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen text-white">
 
-      <nav className="border-b border-periwinkle/20 px-6 py-3 flex items-center justify-between backdrop-blur-sm bg-mesa/80 sticky top-0 z-10">
-        <Link href="/">
-          <HorizontalLockup height={72} />
-        </Link>
-        <div className="flex items-center gap-6">
-          <Link href="/" className="text-lg text-sand/50 hover:text-desert-sky transition-colors hidden sm:block">
-            feed
-          </Link>
-          <Link href="/about" className="text-lg text-sand/50 hover:text-desert-sky transition-colors hidden sm:block">
-            about
-          </Link>
-          <AuthStatus />
-        </div>
-      </nav>
+      <SiteNav />
 
       <div className="max-w-2xl mx-auto px-6 py-16">
 

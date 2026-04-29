@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "remotion:studio": "remotion studio remotion/Root.tsx",
+    "remotion:render:intro": "remotion render remotion/Root.tsx Intro --output out/intro.mp4",
+    "remotion:render:outro": "remotion render remotion/Root.tsx Outro --output out/outro.mp4"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
@@ -24,6 +27,8 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@remotion/cli": "^4.0.454",
+    "@remotion/paths": "^4.0.454",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20.19.39",
     "@types/react": "^19",
@@ -31,6 +36,7 @@
     "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "remotion": "^4.0.454",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

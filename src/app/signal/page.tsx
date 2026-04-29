@@ -1,10 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { HorizontalLockup } from '@/components/SpiralIcon'
-import AuthStatus from '@/components/AuthStatus'
 import Footer from '@/components/Footer'
+import SiteNav from '@/components/SiteNav'
 import SignalCard from '@/components/SignalCard'
 import { getSignalPosts, type SignalPost } from '@/lib/firebase/signal'
 import { CANONICAL_TAGS } from '@/lib/constants/tags'
@@ -40,14 +38,7 @@ export default function SignalPage() {
   return (
     <main className="min-h-screen text-white">
 
-      <nav className="border-b border-periwinkle/20 px-6 py-3 flex items-center justify-between backdrop-blur-sm bg-mesa/80 sticky top-0 z-10">
-        <Link href="/"><HorizontalLockup height={72} /></Link>
-        <div className="flex items-center gap-6">
-          <Link href="/" className="text-lg text-sand/50 hover:text-desert-sky transition-colors hidden sm:block">feed</Link>
-          <Link href="/about" className="text-lg text-sand/50 hover:text-desert-sky transition-colors hidden sm:block">about</Link>
-          <AuthStatus />
-        </div>
-      </nav>
+      <SiteNav />
 
       <section className="px-6 pt-16 pb-10 max-w-4xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 text-xs text-periwinkle-light bg-periwinkle/10 border border-periwinkle/25 rounded-full px-3 py-1 mb-8">
@@ -56,7 +47,7 @@ export default function SignalPage() {
         </div>
         <h1 className="text-4xl font-medium text-desert-sky mb-3 tracking-tight">the dispatch</h1>
         <p className="text-white/50 text-base max-w-lg mx-auto leading-relaxed font-light">
-          links, articles, and breaking signal — hand-picked and annotated by the clear the signal team.
+          links, articles, and breaking signal. hand-picked and annotated by the team.
         </p>
       </section>
 

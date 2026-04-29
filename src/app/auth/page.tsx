@@ -145,7 +145,7 @@ export default function AuthPage() {
                   <p className="text-periwinkle-light text-lg font-medium mb-2">check your inbox</p>
                   <p className="text-sand/50 text-sm">
                     we sent a sign-in link to{' '}
-                    <strong className="text-desert-sky">{email}</strong>. click it to sign in — no password needed.
+                    <strong className="text-desert-sky">{email}</strong>. click it to sign in. no password needed.
                   </p>
                 </div>
               ) : (

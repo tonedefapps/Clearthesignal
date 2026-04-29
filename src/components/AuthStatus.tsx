@@ -6,6 +6,15 @@ import { useAuth } from '@/context/AuthContext'
 import { signOut } from '@/lib/firebase/auth'
 import { InstagramIcon, RedditIcon, DiscordIcon } from './SocialIcons'
 
+function UserIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+    </svg>
+  )
+}
+
 export default function AuthStatus() {
   const { user, profile, loading } = useAuth()
   const [open, setOpen] = useState(false)
@@ -64,7 +73,7 @@ export default function AuthStatus() {
                 className="text-sand/40 hover:text-desert-sky transition-colors" aria-label="reddit">
                 <RedditIcon size={18} />
               </a>
-              <span className="text-sand/20 cursor-default" title="discord — coming soon">
+              <span className="text-sand/20 cursor-default" title="discord: coming soon">
                 <DiscordIcon size={18} />
               </span>
             </div>
@@ -83,11 +92,15 @@ export default function AuthStatus() {
   }
 
   return (
-    <Link
-      href="/auth"
-      className="bg-periwinkle hover:bg-periwinkle-light text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
-    >
-      sign in
+    <Link href="/auth" aria-label="sign in">
+      {/* Mobile: icon button */}
+      <span className="sm:hidden w-9 h-9 rounded-full border border-periwinkle/40 hover:border-periwinkle hover:bg-periwinkle/10 transition-colors flex items-center justify-center text-periwinkle-light">
+        <UserIcon />
+      </span>
+      {/* Desktop: text pill */}
+      <span className="hidden sm:inline-flex bg-periwinkle hover:bg-periwinkle-light text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">
+        sign in
+      </span>
     </Link>
   )
 }

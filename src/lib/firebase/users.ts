@@ -1,4 +1,7 @@
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import {
+  doc, getDoc, setDoc, updateDoc, serverTimestamp,
+  collection, query, where, getDocs, limit, orderBy,
+} from 'firebase/firestore'
 import { getClientDb } from './client'
 
 const ADMIN_EMAILS = [
@@ -32,6 +35,30 @@ export async function updateUserProfile(
 ): Promise<void> {
   const ref = doc(getClientDb(), 'users', uid)
   await updateDoc(ref, { ...data })
+}
+
+export async function getUserByEmail(email: string): Promise<UserProfile | null> {
+  const db = getClientDb()
+  const q = query(collection(db, 'users'), where('email', '==', email), limit(1))
+  const snap = await getDocs(q)
+  if (snap.empty) return null
+  return snap.docs[0].data() as UserProfile
+}
+
+export async function setUserRole(uid: string, role: 'user' | 'mod' | 'admin'): Promise<void> {
+  const db = getClientDb()
+  await updateDoc(doc(db, 'users', uid), { role })
+}
+
+export async function getTeamMembers(): Promise<UserProfile[]> {
+  const db = getClientDb()
+  const q = query(
+    collection(db, 'users'),
+    where('role', 'in', ['admin', 'mod']),
+    orderBy('role'),
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map(d => d.data() as UserProfile)
 }
 
 export async function createUserProfile(

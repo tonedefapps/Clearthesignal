@@ -1,14 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import Link from 'next/link'
 import VideoCard from '@/components/VideoCard'
 import TagFilter from '@/components/TagFilter'
-import AuthStatus from '@/components/AuthStatus'
 import { useAuth } from '@/context/AuthContext'
 import Footer from '@/components/Footer'
 import SignalStrip from '@/components/SignalStrip'
-import { HorizontalLockup } from '@/components/SpiralIcon'
+import SiteNav from '@/components/SiteNav'
 
 interface Video {
   id: string
@@ -84,27 +82,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen text-white">
 
-      {/* nav */}
-      <nav className="border-b border-periwinkle/20 px-6 py-3 flex items-center justify-between backdrop-blur-sm bg-mesa/80 sticky top-0 z-10">
-        <HorizontalLockup height={108} />
-        <div className="flex items-center gap-6">
-          <Link href="/signal" className="text-lg text-sand/50 hover:text-desert-sky transition-colors hidden sm:block">
-            dispatch
-          </Link>
-          <Link href="/about" className="text-lg text-sand/50 hover:text-desert-sky transition-colors hidden sm:block">
-            about
-          </Link>
-          <a
-            href="https://discord.gg/placeholder"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-lg text-sand/50 hover:text-sand transition-colors hidden sm:block"
-          >
-            community →
-          </a>
-          <AuthStatus />
-        </div>
-      </nav>
+      <SiteNav />
 
       {/* hero */}
       <section className="px-6 pt-20 pb-16 max-w-4xl mx-auto text-center">
@@ -118,7 +96,7 @@ export default function HomePage() {
           <span className="text-red-rock">find your frequency.</span>
         </h1>
         <p className="text-white/60 text-lg max-w-xl mx-auto leading-relaxed font-light">
-          consciousness, synchronicity, disclosure, energy — filtered for substance, credibility, and tone. no noise. no fear. no agenda.
+          consciousness, synchronicity, disclosure, energy. filtered for substance, credibility, and tone. no noise. no fear. no agenda.
         </p>
       </section>
 
@@ -128,7 +106,7 @@ export default function HomePage() {
           {[
             {
               step: '01',
-              title: 'we watch the noise',
+              title: 'we scan the landscape',
               body: 'hundreds of videos published daily across consciousness, UAP, energy, and awareness channels.',
             },
             {
@@ -186,7 +164,7 @@ export default function HomePage() {
         ) : videos.length === 0 ? (
           <div className="text-center py-24 px-6">
             <p className="text-periwinkle/40 text-lg font-light tracking-wide">no signal yet</p>
-            <p className="text-sand/25 text-sm mt-2">the pipeline runs daily — check back soon.</p>
+            <p className="text-sand/25 text-sm mt-2">the pipeline runs daily. check back soon.</p>
           </div>
         ) : (
           <div className="relative">
