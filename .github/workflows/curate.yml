@@ -20,7 +20,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: 'projects/147611536438/locations/global/workloadIdentityPools/github-actions/providers/github'
+          workload_identity_provider: 'projects/147611536438/locations/global/workloadIdentityPools/github/providers/github'
           service_account: 'firebase-adminsdk-fbsvc@clearthesignal.iam.gserviceaccount.com'
 
       - name: Setup Node.js
