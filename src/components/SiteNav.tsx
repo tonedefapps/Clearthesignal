@@ -4,19 +4,20 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
+import { signOut } from '@/lib/firebase/auth'
 import { HorizontalLockup, SpiralIcon } from './SpiralIcon'
 import AuthStatus from './AuthStatus'
 
 interface SiteNavProps {
-  /** Extra elements to render on the right of the desktop link row (e.g. role badge) */
   extra?: React.ReactNode
 }
 
 export default function SiteNav({ extra }: SiteNavProps) {
   const pathname = usePathname()
-  const { profile } = useAuth()
+  const { user, profile, loading } = useAuth()
   const [open, setOpen] = useState(false)
   const isAdmin = profile?.role === 'admin' || profile?.role === 'mod'
+  const displayName = profile?.displayName || user?.displayName || user?.email || ''
 
   const link = (href: string, label: string) => {
     const active = pathname === href
@@ -41,7 +42,7 @@ export default function SiteNav({ extra }: SiteNavProps) {
         </Link>
 
         <div className="flex items-center gap-3 sm:gap-5">
-          {/* desktop links */}
+          {/* desktop links + auth */}
           <span className="hidden sm:flex items-center gap-5">
             {link('/signal', 'dispatch')}
             {link('/about', 'about')}
@@ -66,19 +67,21 @@ export default function SiteNav({ extra }: SiteNavProps) {
               </Link>
             )}
             {extra}
+            <AuthStatus />
           </span>
 
-          <AuthStatus />
-
-          {/* hamburger */}
+          {/* hamburger (mobile only) — dot appears when signed in */}
           <button
             onClick={() => setOpen(o => !o)}
-            className="sm:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-lg hover:bg-periwinkle/10 transition-colors"
+            className="sm:hidden relative w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-lg hover:bg-periwinkle/10 transition-colors"
             aria-label="menu"
           >
             <span className={`block w-5 h-px bg-sand/60 transition-transform duration-200 ${open ? 'rotate-45 translate-y-[7px]' : ''}`} />
             <span className={`block w-5 h-px bg-sand/60 transition-opacity duration-200 ${open ? 'opacity-0' : ''}`} />
             <span className={`block w-5 h-px bg-sand/60 transition-transform duration-200 ${open ? '-rotate-45 -translate-y-[7px]' : ''}`} />
+            {!loading && user && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-periwinkle border-2 border-mesa pointer-events-none" />
+            )}
           </button>
         </div>
       </div>
@@ -106,6 +109,32 @@ export default function SiteNav({ extra }: SiteNavProps) {
               admin panel
             </Link>
           )}
+
+          {/* auth section */}
+          <div className="border-t border-periwinkle/10 mt-2 pt-2">
+            {!loading && user ? (
+              <>
+                {displayName && (
+                  <p className="px-3 py-1.5 text-xs text-sand/30 truncate">{displayName}</p>
+                )}
+                <Link href="/profile" onClick={() => setOpen(false)}
+                  className="block px-2 py-2.5 text-sm text-sand/60 hover:text-desert-sky transition-colors rounded-lg hover:bg-periwinkle/5">
+                  your signal
+                </Link>
+                <button
+                  onClick={() => { signOut(); setOpen(false) }}
+                  className="w-full text-left px-2 py-2.5 text-sm text-sand/40 hover:text-white transition-colors rounded-lg hover:bg-periwinkle/5"
+                >
+                  sign out
+                </button>
+              </>
+            ) : !loading && (
+              <Link href="/auth" onClick={() => setOpen(false)}
+                className="block px-2 py-2.5 text-sm text-periwinkle-light hover:text-desert-sky transition-colors rounded-lg hover:bg-periwinkle/5">
+                sign in
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </nav>

@@ -24,7 +24,10 @@ export default function HomePage() {
   const { profile } = useAuth()
   const [videos, setVideos] = useState<Video[]>([])
   const [activeTag, setActiveTag] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [showSwipeHint, setShowSwipeHint] = useState(true)
+  const [hoveredTags, setHoveredTags] = useState<string[]>([])
   const carouselRef = useRef<HTMLDivElement>(null)
   const [atStart, setAtStart] = useState(true)
   const [atEnd, setAtEnd] = useState(false)
@@ -35,6 +38,7 @@ export default function HomePage() {
     if (!el) return
     setAtStart(el.scrollLeft < 16)
     setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 16)
+    if (el.scrollLeft > 20) setShowSwipeHint(false)
   }
 
   useEffect(() => {
@@ -74,10 +78,18 @@ export default function HomePage() {
     fetchVideos(activeTag, profile?.interests)
   }, [activeTag, fetchVideos, profile?.interests])
 
-  // reset carousel scroll on tag change
+  // clear search and reset scroll on tag change
   useEffect(() => {
+    setSearchQuery('')
     carouselRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
   }, [activeTag])
+
+  const filteredVideos = searchQuery.trim()
+    ? videos.filter(v =>
+        v.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.tags?.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : videos
 
   return (
     <main className="min-h-screen text-white">
@@ -88,7 +100,7 @@ export default function HomePage() {
       <section className="px-6 pt-20 pb-16 max-w-4xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 text-xs text-periwinkle-light bg-periwinkle/10 border border-periwinkle/25 rounded-full px-3 py-1 mb-8">
           <span className="w-1.5 h-1.5 bg-periwinkle rounded-full animate-pulse" />
-          ai-curated · updated daily
+          updated daily
         </div>
         <h1 className="text-5xl sm:text-6xl font-medium tracking-tight mb-4 leading-tight">
           <span className="text-desert-sky">clear the signal.</span>
@@ -96,49 +108,41 @@ export default function HomePage() {
           <span className="text-red-rock">find your frequency.</span>
         </h1>
         <p className="text-white/60 text-lg max-w-xl mx-auto leading-relaxed font-light">
-          consciousness, synchronicity, disclosure, energy. filtered for substance, credibility, and tone. no noise. no fear. no agenda.
+          focus on the message. not the noise.
         </p>
-      </section>
-
-      {/* how it works */}
-      <section className="px-6 pb-20 max-w-4xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            {
-              step: '01',
-              title: 'we scan the landscape',
-              body: 'hundreds of videos published daily across consciousness, UAP, energy, and awareness channels.',
-            },
-            {
-              step: '02',
-              title: 'ai scores the signal',
-              body: 'each video is scored across novelty, credibility, tone, signal density, and timing relevance.',
-            },
-            {
-              step: '03',
-              title: 'you get the frequency',
-              body: 'only content that passes our threshold reaches the feed. no doom, no fringe, no filler.',
-            },
-          ].map(item => (
-            <div key={item.step} className="bg-mesa-light/70 border border-periwinkle/15 rounded-2xl p-6 backdrop-blur-sm">
-              <p className="text-periwinkle/50 text-xs tracking-widest mb-2">{item.step}</p>
-              <h3 className="text-periwinkle-light font-medium mb-2">{item.title}</h3>
-              <p className="text-white/50 text-sm leading-relaxed">{item.body}</p>
-            </div>
-          ))}
-        </div>
       </section>
 
       <SignalStrip />
 
       {/* feed */}
       <section id="feed" className="pb-24">
-        {/* filter pills */}
+        {/* search + filter */}
         <div className="px-6 mb-6 max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm text-sand/40 tracking-widest">the signal</h2>
           </div>
-          <TagFilter active={activeTag} onChange={setActiveTag} />
+
+          {/* search */}
+          <div className="relative mb-4">
+            <input
+              type="text"
+              placeholder="search by title or topic..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full bg-mesa-light/50 border border-periwinkle/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-sand/30 focus:outline-none focus:border-periwinkle/45 transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-sand/40 hover:text-sand/70 transition-colors text-xl leading-none"
+                aria-label="clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          <TagFilter active={activeTag} onChange={setActiveTag} highlightedTags={hoveredTags} />
         </div>
 
         {/* carousel */}
@@ -161,10 +165,19 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-        ) : videos.length === 0 ? (
+        ) : filteredVideos.length === 0 ? (
           <div className="text-center py-24 px-6">
-            <p className="text-periwinkle/40 text-lg font-light tracking-wide">no signal yet</p>
-            <p className="text-sand/25 text-sm mt-2">the pipeline runs daily. check back soon.</p>
+            {searchQuery ? (
+              <>
+                <p className="text-periwinkle/40 text-lg font-light tracking-wide">no signal found</p>
+                <p className="text-sand/25 text-sm mt-2">try a different search, or <button onClick={() => setSearchQuery('')} className="text-desert-sky/50 hover:text-desert-sky underline-offset-2 underline transition-colors">clear it</button></p>
+              </>
+            ) : (
+              <>
+                <p className="text-periwinkle/40 text-lg font-light tracking-wide">no signal yet</p>
+                <p className="text-sand/25 text-sm mt-2">the pipeline runs daily. check back soon.</p>
+              </>
+            )}
           </div>
         ) : (
           <div className="relative">
@@ -198,11 +211,24 @@ export default function HomePage() {
               className={`flex gap-4 overflow-x-auto px-6 pb-4 ${!isOverflowing ? 'justify-center' : ''}`}
               style={{ scrollbarWidth: 'none', scrollSnapType: 'x mandatory' }}
             >
-              {videos.map(video => (
-                <VideoCard key={video.id} {...video} />
+              {filteredVideos.map(video => (
+                <VideoCard
+                  key={video.id}
+                  {...video}
+                  onHoverTags={setHoveredTags}
+                  onLeaveTags={() => setHoveredTags([])}
+                />
               ))}
               <div className="w-2 shrink-0" />
             </div>
+
+            {/* mobile swipe hint — fades after first scroll */}
+            {showSwipeHint && isOverflowing && (
+              <div className="sm:hidden flex items-center justify-center gap-1.5 mt-3 animate-pulse">
+                <span className="text-sand/25 text-xs tracking-wide">swipe to explore</span>
+                <span className="text-sand/25 text-xs">→</span>
+              </div>
+            )}
           </div>
         )}
       </section>

@@ -9,9 +9,10 @@ const FEED_TAGS = [{ value: '', label: 'all' }, ...CANONICAL_TAGS.map(t => ({ va
 interface TagFilterProps {
   active: string
   onChange: (tag: string) => void
+  highlightedTags?: string[]
 }
 
-export default function TagFilter({ active, onChange }: TagFilterProps) {
+export default function TagFilter({ active, onChange, highlightedTags = [] }: TagFilterProps) {
   const { profile } = useAuth()
   const hasInterests = profile?.interests && profile.interests.length > 0
 
@@ -21,7 +22,7 @@ export default function TagFilter({ active, onChange }: TagFilterProps) {
         <button
           onClick={() => onChange('my-feed')}
           className={clsx(
-            'text-xs px-4 py-1.5 rounded-full border transition-all duration-150 whitespace-nowrap shrink-0 tracking-wide',
+            'text-xs px-4 py-1.5 rounded-full border transition-all duration-200 whitespace-nowrap shrink-0 tracking-wide',
             active === 'my-feed'
               ? 'bg-red-rock border-red-rock text-white'
               : 'bg-mesa-light/80 border-red-rock/30 text-sand/60 hover:border-red-rock/55 hover:text-sand/90'
@@ -30,20 +31,26 @@ export default function TagFilter({ active, onChange }: TagFilterProps) {
           my feed
         </button>
       )}
-      {FEED_TAGS.map(tag => (
-        <button
-          key={tag.value}
-          onClick={() => onChange(tag.value)}
-          className={clsx(
-            'text-xs px-4 py-1.5 rounded-full border transition-all duration-150 whitespace-nowrap shrink-0 tracking-wide',
-            active === tag.value
-              ? 'bg-periwinkle border-periwinkle text-white'
-              : 'bg-mesa-light/80 border-periwinkle/20 text-sand/50 hover:border-periwinkle/45 hover:text-sand/80'
-          )}
-        >
-          {tag.label}
-        </button>
-      ))}
+      {FEED_TAGS.map(tag => {
+        const isActive = active === tag.value
+        const isHighlighted = !isActive && tag.value !== '' && highlightedTags.includes(tag.value)
+        return (
+          <button
+            key={tag.value}
+            onClick={() => onChange(tag.value)}
+            className={clsx(
+              'text-xs px-4 py-1.5 rounded-full border transition-all duration-200 whitespace-nowrap shrink-0 tracking-wide',
+              isActive
+                ? 'bg-periwinkle border-periwinkle text-white'
+                : isHighlighted
+                  ? 'bg-periwinkle/15 border-periwinkle/55 text-periwinkle-light scale-105'
+                  : 'bg-mesa-light/80 border-periwinkle/20 text-sand/50 hover:border-periwinkle/45 hover:text-sand/80'
+            )}
+          >
+            {tag.label}
+          </button>
+        )
+      })}
     </div>
   )
 }

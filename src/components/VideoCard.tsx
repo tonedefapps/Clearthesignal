@@ -1,7 +1,6 @@
 'use client'
 
 import Image from 'next/image'
-import { clsx } from 'clsx'
 
 interface VideoCardProps {
   id: string
@@ -13,20 +12,10 @@ interface VideoCardProps {
   scoreRationale: string
   tags: string[]
   publishedAt: string
+  onHoverTags?: (tags: string[]) => void
+  onLeaveTags?: () => void
 }
 
-function ScoreBadge({ score }: { score: number }) {
-  return (
-    <span className={clsx(
-      'text-xs font-medium px-2 py-0.5 rounded-full border tracking-wide',
-      score >= 4
-        ? 'bg-periwinkle/25 text-periwinkle-light border-periwinkle/40'
-        : 'bg-red-rock/20 text-red-rock-light border-red-rock/35'
-    )}>
-      {score.toFixed(1)}
-    </span>
-  )
-}
 
 export default function VideoCard({
   title,
@@ -34,8 +23,11 @@ export default function VideoCard({
   thumbnailUrl,
   youtubeUrl,
   scores,
+  scoreRationale,
   tags,
   publishedAt,
+  onHoverTags,
+  onLeaveTags,
 }: VideoCardProps) {
   const topTags = tags?.slice(0, 2) || []
   const date = publishedAt
@@ -47,7 +39,9 @@ export default function VideoCard({
       href={youtubeUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex flex-col w-[270px] sm:w-[300px] shrink-0 bg-mesa-light border border-periwinkle/15 rounded-2xl overflow-hidden hover:border-periwinkle/40 transition-all duration-200 scroll-snap-align-start"
+      onMouseEnter={() => onHoverTags?.(tags ?? [])}
+      onMouseLeave={() => onLeaveTags?.()}
+      className="group relative flex flex-col w-[270px] sm:w-[300px] shrink-0 bg-mesa-light border border-periwinkle/15 rounded-2xl overflow-hidden hover:border-periwinkle/40 transition-all duration-200 scroll-snap-align-start"
     >
       {/* thumbnail */}
       <div className="relative aspect-video overflow-hidden bg-white/5">
@@ -71,10 +65,6 @@ export default function VideoCard({
             </svg>
           </div>
         </div>
-        {/* score badge */}
-        <div className="absolute top-2 right-2">
-          <ScoreBadge score={scores?.overall ?? 0} />
-        </div>
       </div>
 
       {/* info */}
@@ -96,6 +86,24 @@ export default function VideoCard({
           </div>
         )}
       </div>
+
+      {/* desktop hover detail — rationale + full tag set */}
+      {scoreRationale && (
+        <div className="hidden sm:flex absolute inset-0 flex-col justify-end p-4 rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.65) 45%, transparent 100%)' }}
+        >
+          <p className="text-white/80 text-xs leading-relaxed line-clamp-3 mb-2.5">{scoreRationale}</p>
+          {tags.length > 0 && (
+            <div className="flex gap-1.5 flex-wrap">
+              {tags.map(tag => (
+                <span key={tag} className="text-xs text-desert-sky/80 bg-black/40 border border-periwinkle/25 rounded-full px-2 py-0.5">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </a>
   )
 }
