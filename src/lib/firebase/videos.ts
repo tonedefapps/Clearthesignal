@@ -14,7 +14,15 @@ export interface VideoSummary {
   passed: boolean
   manuallyAdded?: boolean
   tags: string[]
-  scores: { overall: number }
+  scores: {
+    overall: number
+    novelty?: number
+    credibility?: number
+    toneAlignment?: number
+    signalDensity?: number
+    timingRelevance?: number
+  }
+  scoreRationale?: string
   scoredAt?: { seconds: number }
 }
 

@@ -11,7 +11,7 @@ import { CANONICAL_TAGS } from '@/lib/constants/tags'
 import { getDb, doc, setDoc, serverTimestamp } from '@/lib/firebase/server'
 import SiteNav from '@/components/SiteNav'
 
-type Tab = 'overview' | 'dispatch' | 'feed' | 'team'
+type Tab = 'overview' | 'pipeline' | 'dispatch' | 'feed' | 'team'
 
 const EMPTY_POST = { headline: '', url: '', source: '', note: '', tags: [] as string[] }
 
@@ -36,6 +36,7 @@ export default function AdminPage() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'overview', label: 'overview' },
+    { id: 'pipeline', label: 'pipeline' },
     { id: 'dispatch', label: 'dispatch' },
     { id: 'feed', label: 'feed' },
     ...(profile?.role === 'admin' ? [{ id: 'team' as Tab, label: 'team' }] : []),
@@ -76,6 +77,7 @@ export default function AdminPage() {
         </div>
 
         {tab === 'overview' && <OverviewTab onNavigate={setTab} />}
+        {tab === 'pipeline' && <PipelineTab />}
         {tab === 'dispatch' && <DispatchTab user={user} profile={profile} />}
         {tab === 'feed' && <FeedTab user={user} profile={profile} />}
         {tab === 'team' && profile?.role === 'admin' && <TeamTab />}
@@ -139,6 +141,175 @@ function OverviewTab({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
           )
         )}
       </div>
+    </div>
+  )
+}
+
+// ── Pipeline ──────────────────────────────────────────────────────────────────
+
+const SCORE_DIMS: { key: keyof VideoSummary['scores']; label: string }[] = [
+  { key: 'novelty', label: 'novelty' },
+  { key: 'credibility', label: 'credibility' },
+  { key: 'toneAlignment', label: 'tone' },
+  { key: 'signalDensity', label: 'signal' },
+  { key: 'timingRelevance', label: 'timing' },
+]
+
+function ScorePip({ value }: { value: number }) {
+  const color = value >= 4 ? 'bg-desert-sky' : value >= 3 ? 'bg-periwinkle/60' : 'bg-red-rock/60'
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="flex gap-0.5">
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} className={`w-1.5 h-1.5 rounded-full ${i <= Math.round(value) ? color : 'bg-white/10'}`} />
+        ))}
+      </div>
+      <span className="text-[10px] text-sand/40">{value.toFixed(1)}</span>
+    </div>
+  )
+}
+
+function PipelineTab() {
+  const [videos, setVideos] = useState<VideoSummary[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'all' | 'passed' | 'filtered'>('all')
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  useEffect(() => {
+    getRecentVideos(100).then(setVideos).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  const pipelineVideos = videos.filter(v => !v.manuallyAdded)
+  const shown = pipelineVideos.filter(v =>
+    filter === 'all' ? true : filter === 'passed' ? v.passed : !v.passed
+  )
+  const passCount = pipelineVideos.filter(v => v.passed).length
+  const filterCount = pipelineVideos.filter(v => !v.passed).length
+
+  return (
+    <div className="flex flex-col gap-6">
+
+      {/* summary bar */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'scored', value: pipelineVideos.length, color: 'text-white' },
+          { label: 'passed', value: passCount, color: 'text-desert-sky' },
+          { label: 'filtered', value: filterCount, color: 'text-red-rock/80' },
+        ].map(s => (
+          <div key={s.label} className="bg-mesa-light/60 border border-periwinkle/15 rounded-xl p-4 text-center">
+            <p className={`text-2xl font-medium ${s.color}`}>{s.value}</p>
+            <p className="text-xs text-sand/40 mt-1">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* filter pills */}
+      <div className="flex gap-2">
+        {(['all', 'passed', 'filtered'] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={`text-xs px-4 py-1.5 rounded-full border transition-all ${
+              filter === f
+                ? 'bg-periwinkle border-periwinkle text-white'
+                : 'bg-mesa-light/60 border-periwinkle/20 text-sand/50 hover:border-periwinkle/40'
+            }`}>
+            {f}
+          </button>
+        ))}
+        <span className="text-xs text-sand/30 self-center ml-2">threshold: 3.5 / 5</span>
+      </div>
+
+      {/* video list */}
+      {loading ? (
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-16 bg-mesa-light/40 rounded-xl animate-pulse" />
+          ))}
+        </div>
+      ) : shown.length === 0 ? (
+        <p className="text-sand/30 text-sm py-8 text-center">no pipeline results yet. run the pipeline to see scores here.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {shown.map(v => {
+            const isOpen = expanded === v.id
+            const date = v.scoredAt
+              ? new Date(v.scoredAt.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              : ''
+            return (
+              <div key={v.id}
+                className={`border rounded-xl overflow-hidden transition-colors ${
+                  v.passed
+                    ? 'border-desert-sky/20 bg-mesa-light/40'
+                    : 'border-red-rock/15 bg-mesa-light/25'
+                }`}>
+                {/* row */}
+                <button
+                  onClick={() => setExpanded(isOpen ? null : v.id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left"
+                >
+                  {/* pass/fail dot */}
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${v.passed ? 'bg-desert-sky/80' : 'bg-red-rock/60'}`} />
+
+                  {/* title + channel */}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className={`text-sm truncate ${v.passed ? 'text-white/85' : 'text-white/45'}`}>{v.title}</span>
+                    <span className="text-xs text-sand/35">{v.channelName} · {date}</span>
+                  </div>
+
+                  {/* overall score */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-sm font-medium tabular-nums ${
+                      v.scores.overall >= 4 ? 'text-desert-sky' :
+                      v.scores.overall >= 3.5 ? 'text-periwinkle-light' :
+                      'text-red-rock/70'
+                    }`}>
+                      {v.scores.overall.toFixed(1)}
+                    </span>
+                    <span className={`text-xs transition-transform duration-200 text-sand/30 ${isOpen ? 'rotate-180' : ''}`}>▾</span>
+                  </div>
+                </button>
+
+                {/* expanded detail */}
+                {isOpen && (
+                  <div className="px-4 pb-4 border-t border-periwinkle/10 pt-3 flex flex-col gap-4">
+                    {/* score breakdown */}
+                    <div className="flex gap-6 flex-wrap">
+                      {SCORE_DIMS.map(({ key, label }) => {
+                        const val = v.scores[key]
+                        return val !== undefined ? (
+                          <div key={key} className="flex flex-col items-center gap-1.5">
+                            <ScorePip value={val} />
+                            <span className="text-[10px] text-sand/40 tracking-wide">{label}</span>
+                          </div>
+                        ) : null
+                      })}
+                    </div>
+
+                    {/* rationale */}
+                    {v.scoreRationale && (
+                      <p className="text-xs text-white/55 leading-relaxed border-l-2 border-periwinkle/20 pl-3">
+                        {v.scoreRationale}
+                      </p>
+                    )}
+
+                    {/* tags + link */}
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div className="flex gap-1.5 flex-wrap">
+                        {v.tags.map(t => (
+                          <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-periwinkle/10 border border-periwinkle/20 text-periwinkle-light/50">{t}</span>
+                        ))}
+                      </div>
+                      <a href={v.youtubeUrl} target="_blank" rel="noopener noreferrer"
+                        className="text-xs text-periwinkle/40 hover:text-periwinkle transition-colors shrink-0">
+                        watch on youtube →
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
