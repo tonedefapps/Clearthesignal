@@ -1,12 +1,11 @@
-import { initializeApp, cert, getApps } from 'firebase-admin/app'
+import { initializeApp, applicationDefault, getApps } from 'firebase-admin/app'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { google } from 'googleapis'
 import Anthropic from '@anthropic-ai/sdk'
 
 // ── Firebase Admin ────────────────────────────────────────────────────────────
 if (!getApps().length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-  initializeApp({ credential: cert(serviceAccount) })
+  initializeApp({ credential: applicationDefault() })
 }
 
 const db = getFirestore()

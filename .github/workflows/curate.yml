@@ -5,6 +5,10 @@ on:
     - cron: '0 8 * * *'   # 8am UTC daily
   workflow_dispatch:        # Allow manual trigger from GitHub UI
 
+permissions:
+  contents: read
+  id-token: write           # Required for Workload Identity Federation
+
 jobs:
   curate:
     runs-on: ubuntu-latest
@@ -12,6 +16,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/147611536438/locations/global/workloadIdentityPools/github-actions/providers/github'
+          service_account: 'firebase-adminsdk-fbsvc@clearthesignal.iam.gserviceaccount.com'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -27,4 +37,3 @@ jobs:
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
