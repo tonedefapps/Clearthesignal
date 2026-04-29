@@ -168,15 +168,29 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="relative">
-            {/* left fade */}
+            {/* left fade + arrow */}
             {!atStart && (
-              <div className="absolute left-0 top-0 bottom-4 w-24 z-10 pointer-events-none"
-                style={{ background: 'linear-gradient(to right, #1e1e35 0%, transparent 100%)' }} />
+              <div className="absolute left-0 top-0 bottom-4 w-24 z-10 hidden sm:flex items-center"
+                style={{ background: 'linear-gradient(to right, #1e1e35 60%, transparent 100%)' }}>
+                <button
+                  onClick={() => carouselRef.current?.scrollBy({ left: -320, behavior: 'smooth' })}
+                  className="ml-3 w-9 h-9 rounded-full bg-mesa-light/80 border border-periwinkle/25 text-sand/60 hover:text-white hover:border-periwinkle/50 transition-all flex items-center justify-center"
+                >
+                  ←
+                </button>
+              </div>
             )}
-            {/* right fade */}
+            {/* right fade + arrow */}
             {!atEnd && (
-              <div className="absolute right-0 top-0 bottom-4 w-24 z-10 pointer-events-none"
-                style={{ background: 'linear-gradient(to left, #1e1e35 0%, transparent 100%)' }} />
+              <div className="absolute right-0 top-0 bottom-4 w-24 z-10 hidden sm:flex items-center justify-end"
+                style={{ background: 'linear-gradient(to left, #1e1e35 60%, transparent 100%)' }}>
+                <button
+                  onClick={() => carouselRef.current?.scrollBy({ left: 320, behavior: 'smooth' })}
+                  className="mr-3 w-9 h-9 rounded-full bg-mesa-light/80 border border-periwinkle/25 text-sand/60 hover:text-white hover:border-periwinkle/50 transition-all flex items-center justify-center"
+                >
+                  →
+                </button>
+              </div>
             )}
             <div
               ref={carouselRef}
