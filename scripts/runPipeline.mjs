@@ -97,6 +97,7 @@ async function fetchRecentVideos(queries = DEFAULT_SEARCH_QUERIES, maxPerQuery =
         order: 'date',
         publishedAfter: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
         maxResults: maxPerQuery,
+        relevanceLanguage: 'en',
       })
 
       for (const item of response.data.items || []) {
@@ -121,6 +122,15 @@ async function fetchRecentVideos(queries = DEFAULT_SEARCH_QUERIES, maxPerQuery =
   }
 
   return results
+}
+
+// ── Language pre-filter ───────────────────────────────────────────────────────
+
+function isLikelyEnglish(title) {
+  const stripped = title.replace(/\s/g, '')
+  if (stripped.length === 0) return true
+  const nonLatin = (stripped.match(/[^\x00-\x7FÀ-ɏ]/g) || []).length
+  return (nonLatin / stripped.length) < 0.25
 }
 
 // ── Clickbait pre-filter ──────────────────────────────────────────────────────
@@ -323,6 +333,23 @@ async function runPipeline() {
         tags: [],
         preFiltered: true,
         preFilterReason: 'noise channel',
+        scoredAt: FieldValue.serverTimestamp(),
+      })
+      preFiltered++
+      continue
+    }
+
+    // language pre-filter
+    if (!isLikelyEnglish(video.title)) {
+      console.log(`  PRE-FILTERED (non-english title): ${video.title}`)
+      await ref.set({
+        ...video,
+        scores: { novelty: 0, credibility: 0, toneAlignment: 0, signalDensity: 0, timingRelevance: 0, overall: 0 },
+        scoreRationale: 'Pre-filtered: non-English title',
+        passed: false,
+        tags: [],
+        preFiltered: true,
+        preFilterReason: 'non-english title',
         scoredAt: FieldValue.serverTimestamp(),
       })
       preFiltered++
