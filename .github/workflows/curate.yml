@@ -2,7 +2,7 @@ name: Daily Content Curation
 
 on:
   schedule:
-    - cron: '0 8 * * *'   # 8am UTC daily
+    - cron: '0 8 */3 * *'  # 8am UTC every 3 days
   workflow_dispatch:        # Allow manual trigger from GitHub UI
 
 permissions:

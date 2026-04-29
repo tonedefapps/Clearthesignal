@@ -300,8 +300,19 @@ Respond ONLY in this exact JSON format:
   return JSON.parse(clean)
 }
 
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+async function getAutoPublish() {
+  try {
+    const snap = await db.collection('settings').doc('pipeline').get()
+    return snap.exists ? (snap.data().autoPublish ?? false) : false
+  } catch { return false }
+}
+
 // ── Pipeline ──────────────────────────────────────────────────────────────────
 async function runPipeline() {
+  const autoPublish = await getAutoPublish()
+  console.log(`Pipeline mode: ${autoPublish ? 'auto-publish' : 'queue (pending review)'}`)
   console.log('Fetching recent videos...')
   const videos = await fetchRecentVideos()
   console.log(`Found ${videos.length} videos to score`)
@@ -330,6 +341,7 @@ async function runPipeline() {
         scores: { novelty: 0, credibility: 0, toneAlignment: 0, signalDensity: 0, timingRelevance: 0, overall: 0 },
         scoreRationale: `Channel "${video.channelName}" is on the noise list.`,
         passed: false,
+        status: 'rejected',
         tags: [],
         preFiltered: true,
         preFilterReason: 'noise channel',
@@ -347,6 +359,7 @@ async function runPipeline() {
         scores: { novelty: 0, credibility: 0, toneAlignment: 0, signalDensity: 0, timingRelevance: 0, overall: 0 },
         scoreRationale: 'Pre-filtered: non-English title',
         passed: false,
+        status: 'rejected',
         tags: [],
         preFiltered: true,
         preFilterReason: 'non-english title',
@@ -365,6 +378,7 @@ async function runPipeline() {
         scores: { novelty: 0, credibility: 0, toneAlignment: 0, signalDensity: 0, timingRelevance: 0, overall: 0 },
         scoreRationale: `Pre-filtered: ${preCheck.reason}`,
         passed: false,
+        status: 'rejected',
         tags: [],
         preFiltered: true,
         preFilterReason: preCheck.reason,
@@ -385,6 +399,11 @@ async function runPipeline() {
         preCheck.flags,
       )
 
+      const publishedPassed = autoPublish ? scorecard.passed : false
+      const status = scorecard.passed
+        ? (autoPublish ? 'approved' : 'pending')
+        : 'rejected'
+
       await ref.set({
         ...video,
         scores: {
@@ -396,7 +415,8 @@ async function runPipeline() {
           overall: scorecard.overall,
         },
         scoreRationale: scorecard.rationale,
-        passed: scorecard.passed,
+        passed: publishedPassed,
+        status,
         tags: scorecard.tags,
         preFiltered: false,
         scoredAt: FieldValue.serverTimestamp(),
@@ -405,7 +425,8 @@ async function runPipeline() {
       await updateChannelStats(video.channelId, video.channelName, scorecard.overall, scorecard.passed)
 
       scorecard.passed ? passed++ : failed++
-      console.log(`  ${scorecard.passed ? 'PASSED' : 'FILTERED'} (${scorecard.overall}) ${preCheck.flags.length ? '[flags: ' + preCheck.flags.join(', ') + ']' : ''}: ${video.title}`)
+      const label = scorecard.passed ? (autoPublish ? 'APPROVED' : 'QUEUED') : 'FILTERED'
+      console.log(`  ${label} (${scorecard.overall}) ${preCheck.flags.length ? '[flags: ' + preCheck.flags.join(', ') + ']' : ''}: ${video.title}`)
     } catch (err) {
       console.error(`  ERROR scoring "${video.title}": ${err.message}`)
     }

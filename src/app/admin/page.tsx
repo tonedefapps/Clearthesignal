@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { createSignalPost, deleteSignalPost, getSignalPosts, type SignalPost } from '@/lib/firebase/signal'
-import { getRecentVideos, removeVideo, getVideoStats, type VideoSummary } from '@/lib/firebase/videos'
+import { getRecentVideos, removeVideo, getVideoStats, approveVideo, rejectVideo, type VideoSummary } from '@/lib/firebase/videos'
 import { getUserByEmail, setUserRole, getTeamMembers, type UserProfile } from '@/lib/firebase/users'
 import { getChannels, setChannelTier, type ChannelRecord, type ChannelTier } from '@/lib/firebase/channels'
 import { CANONICAL_TAGS } from '@/lib/constants/tags'
-import { getDb, doc, setDoc, serverTimestamp } from '@/lib/firebase/server'
+import { getDb, doc, getDoc, setDoc, serverTimestamp } from '@/lib/firebase/server'
 import SiteNav from '@/components/SiteNav'
 
 type Tab = 'overview' | 'pipeline' | 'channels' | 'dispatch' | 'feed' | 'team'
@@ -92,7 +92,7 @@ export default function AdminPage() {
 // ── Overview ─────────────────────────────────────────────────────────────────
 
 function OverviewTab({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
-  const [stats, setStats] = useState<{ passed: number; total: number } | null>(null)
+  const [stats, setStats] = useState<{ passed: number; pending: number; total: number } | null>(null)
   const [postCount, setPostCount] = useState<number | null>(null)
 
   useEffect(() => {
@@ -101,8 +101,8 @@ function OverviewTab({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
   }, [])
 
   const statCards = [
-    { label: 'videos in feed', value: stats?.passed ?? '...', sub: 'passed threshold' },
-    { label: 'total scored', value: stats?.total ?? '...', sub: 'by pipeline' },
+    { label: 'in feed', value: stats?.passed ?? '...', sub: 'approved & live' },
+    { label: 'pending review', value: stats?.pending ?? '...', sub: 'awaiting approval', highlight: (stats?.pending ?? 0) > 0 },
     { label: 'dispatch posts', value: postCount ?? '...', sub: 'published' },
     { label: 'filter rate', value: stats ? `${Math.round((1 - stats.passed / Math.max(stats.total, 1)) * 100)}%` : '...', sub: 'noise removed' },
   ]
@@ -118,8 +118,12 @@ function OverviewTab({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
     <div className="flex flex-col gap-8">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {statCards.map(s => (
-          <div key={s.label} className="bg-mesa-light/60 border border-periwinkle/15 rounded-xl p-4">
-            <p className="text-2xl font-medium text-periwinkle-light">{String(s.value)}</p>
+          <div key={s.label} className={`border rounded-xl p-4 transition-colors ${
+            'highlight' in s && s.highlight
+              ? 'bg-desert-sky/10 border-desert-sky/30'
+              : 'bg-mesa-light/60 border-periwinkle/15'
+          }`}>
+            <p className={`text-2xl font-medium ${'highlight' in s && s.highlight ? 'text-desert-sky' : 'text-periwinkle-light'}`}>{String(s.value)}</p>
             <p className="text-xs text-white/70 mt-1">{s.label}</p>
             <p className="text-xs text-sand/30 mt-0.5">{s.sub}</p>
           </div>
@@ -172,32 +176,92 @@ function ScorePip({ value }: { value: number }) {
   )
 }
 
+function getVideoStatus(v: VideoSummary): 'pending' | 'approved' | 'rejected' {
+  if (v.status) return v.status
+  if (v.manuallyAdded) return 'approved'
+  return v.passed ? 'approved' : 'rejected'
+}
+
 function PipelineTab() {
   const [videos, setVideos] = useState<VideoSummary[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'passed' | 'filtered'>('all')
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [acting, setActing] = useState<string | null>(null)
+  const [autoPublish, setAutoPublish] = useState(false)
+  const [savingMode, setSavingMode] = useState(false)
 
   useEffect(() => {
-    getRecentVideos(100).then(setVideos).catch(() => {}).finally(() => setLoading(false))
+    getRecentVideos(150).then(setVideos).catch(() => {}).finally(() => setLoading(false))
+    getDoc(doc(getDb(), 'settings', 'pipeline'))
+      .then(snap => { if (snap.exists()) setAutoPublish(snap.data().autoPublish ?? false) })
+      .catch(() => {})
   }, [])
 
   const pipelineVideos = videos.filter(v => !v.manuallyAdded)
-  const shown = pipelineVideos.filter(v =>
-    filter === 'all' ? true : filter === 'passed' ? v.passed : !v.passed
-  )
-  const passCount = pipelineVideos.filter(v => v.passed).length
-  const filterCount = pipelineVideos.filter(v => !v.passed).length
+  const pendingCount  = pipelineVideos.filter(v => getVideoStatus(v) === 'pending').length
+  const approvedCount = pipelineVideos.filter(v => getVideoStatus(v) === 'approved').length
+  const rejectedCount = pipelineVideos.filter(v => getVideoStatus(v) === 'rejected').length
+  const shown = filter === 'all' ? pipelineVideos : pipelineVideos.filter(v => getVideoStatus(v) === filter)
+
+  async function handleApprove(videoId: string) {
+    setActing(videoId)
+    try {
+      await approveVideo(videoId)
+      setVideos(prev => prev.map(v => v.id === videoId ? { ...v, passed: true, status: 'approved' } : v))
+    } finally { setActing(null) }
+  }
+
+  async function handleReject(videoId: string) {
+    setActing(videoId)
+    try {
+      await rejectVideo(videoId)
+      setVideos(prev => prev.map(v => v.id === videoId ? { ...v, passed: false, status: 'rejected' } : v))
+    } finally { setActing(null) }
+  }
+
+  async function handleToggleAutoPublish() {
+    const next = !autoPublish
+    setSavingMode(true)
+    try {
+      await setDoc(doc(getDb(), 'settings', 'pipeline'), { autoPublish: next }, { merge: true })
+      setAutoPublish(next)
+    } finally { setSavingMode(false) }
+  }
 
   return (
     <div className="flex flex-col gap-6">
 
+      {/* pipeline mode toggle */}
+      <div className="flex items-center justify-between bg-mesa-light/40 border border-periwinkle/15 rounded-xl px-5 py-4">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm text-white/80">pipeline mode</span>
+          <span className="text-xs text-sand/40">
+            {autoPublish
+              ? 'passing scores are auto-published to the feed'
+              : 'passing scores go to pending review'}
+          </span>
+        </div>
+        <button
+          onClick={handleToggleAutoPublish}
+          disabled={savingMode}
+          className={`text-xs px-4 py-2 rounded-full border transition-all disabled:opacity-50 ${
+            autoPublish
+              ? 'bg-desert-sky/15 border-desert-sky/40 text-desert-sky hover:bg-desert-sky/25'
+              : 'bg-periwinkle/10 border-periwinkle/30 text-periwinkle-light hover:bg-periwinkle/20'
+          }`}
+        >
+          {autoPublish ? 'auto-publish' : 'queue'}
+        </button>
+      </div>
+
       {/* summary bar */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'scored', value: pipelineVideos.length, color: 'text-white' },
-          { label: 'passed', value: passCount, color: 'text-desert-sky' },
-          { label: 'filtered', value: filterCount, color: 'text-red-rock/80' },
+          { label: 'pending', value: pendingCount, color: pendingCount > 0 ? 'text-desert-sky' : 'text-white' },
+          { label: 'approved', value: approvedCount, color: 'text-periwinkle-light' },
+          { label: 'rejected', value: rejectedCount, color: 'text-red-rock/80' },
+          { label: 'total', value: pipelineVideos.length, color: 'text-white/50' },
         ].map(s => (
           <div key={s.label} className="bg-mesa-light/60 border border-periwinkle/15 rounded-xl p-4 text-center">
             <p className={`text-2xl font-medium ${s.color}`}>{s.value}</p>
@@ -207,8 +271,8 @@ function PipelineTab() {
       </div>
 
       {/* filter pills */}
-      <div className="flex gap-2">
-        {(['all', 'passed', 'filtered'] as const).map(f => (
+      <div className="flex gap-2 flex-wrap">
+        {(['all', 'pending', 'approved', 'rejected'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`text-xs px-4 py-1.5 rounded-full border transition-all ${
               filter === f
@@ -229,37 +293,42 @@ function PipelineTab() {
           ))}
         </div>
       ) : shown.length === 0 ? (
-        <p className="text-sand/30 text-sm py-8 text-center">no pipeline results yet. run the pipeline to see scores here.</p>
+        <p className="text-sand/30 text-sm py-8 text-center">
+          {filter === 'pending' ? 'no videos pending review.' : 'no pipeline results yet.'}
+        </p>
       ) : (
         <div className="flex flex-col gap-2">
           {shown.map(v => {
             const isOpen = expanded === v.id
+            const vStatus = getVideoStatus(v)
             const date = v.scoredAt
               ? new Date(v.scoredAt.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
               : ''
             return (
               <div key={v.id}
                 className={`border rounded-xl overflow-hidden transition-colors ${
-                  v.passed
-                    ? 'border-desert-sky/20 bg-mesa-light/40'
-                    : 'border-red-rock/15 bg-mesa-light/25'
+                  vStatus === 'approved' ? 'border-desert-sky/20 bg-mesa-light/40' :
+                  vStatus === 'pending'  ? 'border-periwinkle/30 bg-periwinkle/5' :
+                                          'border-red-rock/15 bg-mesa-light/25'
                 }`}>
                 {/* row */}
                 <button
                   onClick={() => setExpanded(isOpen ? null : v.id)}
                   className="w-full flex items-center gap-3 px-4 py-3 text-left"
                 >
-                  {/* pass/fail dot */}
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${v.passed ? 'bg-desert-sky/80' : 'bg-red-rock/60'}`} />
-
-                  {/* title + channel */}
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${
+                    vStatus === 'approved' ? 'bg-desert-sky/80' :
+                    vStatus === 'pending'  ? 'bg-periwinkle animate-pulse' :
+                                            'bg-red-rock/60'
+                  }`} />
                   <div className="flex flex-col min-w-0 flex-1">
-                    <span className={`text-sm truncate ${v.passed ? 'text-white/85' : 'text-white/45'}`}>{v.title}</span>
+                    <span className={`text-sm truncate ${vStatus !== 'rejected' ? 'text-white/85' : 'text-white/45'}`}>{v.title}</span>
                     <span className="text-xs text-sand/35">{v.channelName} · {date}</span>
                   </div>
-
-                  {/* overall score */}
                   <div className="flex items-center gap-2 shrink-0">
+                    {vStatus === 'pending' && (
+                      <span className="text-xs text-periwinkle/60 border border-periwinkle/30 rounded-full px-2 py-0.5">pending</span>
+                    )}
                     <span className={`text-sm font-medium tabular-nums ${
                       v.scores.overall >= 4 ? 'text-desert-sky' :
                       v.scores.overall >= 3.5 ? 'text-periwinkle-light' :
@@ -287,14 +356,12 @@ function PipelineTab() {
                       })}
                     </div>
 
-                    {/* rationale */}
                     {v.scoreRationale && (
                       <p className="text-xs text-white/55 leading-relaxed border-l-2 border-periwinkle/20 pl-3">
                         {v.scoreRationale}
                       </p>
                     )}
 
-                    {/* tags + link */}
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                       <div className="flex gap-1.5 flex-wrap">
                         {v.tags.map(t => (
@@ -306,6 +373,26 @@ function PipelineTab() {
                         watch on youtube →
                       </a>
                     </div>
+
+                    {/* approve / reject for pending videos */}
+                    {vStatus === 'pending' && (
+                      <div className="flex gap-3 pt-2 border-t border-periwinkle/10">
+                        <button
+                          onClick={() => handleApprove(v.id)}
+                          disabled={acting === v.id}
+                          className="flex-1 py-2 rounded-xl bg-desert-sky/15 border border-desert-sky/35 text-desert-sky text-sm hover:bg-desert-sky/25 transition-colors disabled:opacity-50"
+                        >
+                          approve → publish
+                        </button>
+                        <button
+                          onClick={() => handleReject(v.id)}
+                          disabled={acting === v.id}
+                          className="flex-1 py-2 rounded-xl bg-red-rock/10 border border-red-rock/25 text-red-rock/70 text-sm hover:bg-red-rock/20 transition-colors disabled:opacity-50"
+                        >
+                          reject
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -606,7 +693,7 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
         ...videoMeta,
         scores: { novelty: 5, credibility: 5, toneAlignment: 5, signalDensity: 5, timingRelevance: 5, overall: 5 },
         scoreRationale: 'Manually curated by the team.',
-        passed: true, tags: videoTags, scoredAt: serverTimestamp(), manuallyAdded: true,
+        passed: true, status: 'approved', tags: videoTags, scoredAt: serverTimestamp(), manuallyAdded: true,
       })
       setVideoSuccess('added to feed.')
       setVideoUrl(''); setVideoMeta(null); setVideoTags([])
