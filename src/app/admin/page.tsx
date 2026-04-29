@@ -7,11 +7,12 @@ import { useAuth } from '@/context/AuthContext'
 import { createSignalPost, deleteSignalPost, getSignalPosts, type SignalPost } from '@/lib/firebase/signal'
 import { getRecentVideos, removeVideo, getVideoStats, type VideoSummary } from '@/lib/firebase/videos'
 import { getUserByEmail, setUserRole, getTeamMembers, type UserProfile } from '@/lib/firebase/users'
+import { getChannels, setChannelTier, type ChannelRecord, type ChannelTier } from '@/lib/firebase/channels'
 import { CANONICAL_TAGS } from '@/lib/constants/tags'
 import { getDb, doc, setDoc, serverTimestamp } from '@/lib/firebase/server'
 import SiteNav from '@/components/SiteNav'
 
-type Tab = 'overview' | 'pipeline' | 'dispatch' | 'feed' | 'team'
+type Tab = 'overview' | 'pipeline' | 'channels' | 'dispatch' | 'feed' | 'team'
 
 const EMPTY_POST = { headline: '', url: '', source: '', note: '', tags: [] as string[] }
 
@@ -37,6 +38,7 @@ export default function AdminPage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'overview', label: 'overview' },
     { id: 'pipeline', label: 'pipeline' },
+    { id: 'channels', label: 'channels' },
     { id: 'dispatch', label: 'dispatch' },
     { id: 'feed', label: 'feed' },
     ...(profile?.role === 'admin' ? [{ id: 'team' as Tab, label: 'team' }] : []),
@@ -78,6 +80,7 @@ export default function AdminPage() {
 
         {tab === 'overview' && <OverviewTab onNavigate={setTab} />}
         {tab === 'pipeline' && <PipelineTab />}
+        {tab === 'channels' && <ChannelsTab />}
         {tab === 'dispatch' && <DispatchTab user={user} profile={profile} />}
         {tab === 'feed' && <FeedTab user={user} profile={profile} />}
         {tab === 'team' && profile?.role === 'admin' && <TeamTab />}
@@ -305,6 +308,140 @@ function PipelineTab() {
                     </div>
                   </div>
                 )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Channels ──────────────────────────────────────────────────────────────────
+
+const TIER_META: Record<ChannelTier, { label: string; cls: string }> = {
+  trusted: { label: 'trusted', cls: 'bg-desert-sky/15 border-desert-sky/40 text-desert-sky' },
+  watch:   { label: 'watch',   cls: 'bg-periwinkle/10 border-periwinkle/30 text-periwinkle-light/70' },
+  noise:   { label: 'noise',   cls: 'bg-red-rock/15 border-red-rock/35 text-red-rock/80' },
+}
+
+function ChannelsTab() {
+  const [channels, setChannels] = useState<ChannelRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<ChannelTier | 'all'>('all')
+  const [updating, setUpdating] = useState<string | null>(null)
+
+  useEffect(() => {
+    getChannels().then(setChannels).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  async function handleTier(channelId: string, tier: ChannelTier) {
+    setUpdating(channelId)
+    try {
+      await setChannelTier(channelId, tier)
+      setChannels(prev => prev.map(c => c.channelId === channelId ? { ...c, tier, addedBy: 'admin' } : c))
+    } catch { /* ignore */ }
+    finally { setUpdating(null) }
+  }
+
+  const shown = channels.filter(c => filter === 'all' || c.tier === filter)
+  const counts = { trusted: 0, watch: 0, noise: 0 }
+  channels.forEach(c => counts[c.tier]++)
+
+  return (
+    <div className="flex flex-col gap-6">
+
+      {/* summary */}
+      <div className="grid grid-cols-3 gap-3">
+        {(Object.entries(TIER_META) as [ChannelTier, typeof TIER_META[ChannelTier]][]).map(([tier, meta]) => (
+          <div key={tier} className={`border rounded-xl p-4 text-center ${meta.cls}`}>
+            <p className="text-2xl font-medium">{counts[tier]}</p>
+            <p className="text-xs mt-1 opacity-70">{meta.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* filter + legend */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex gap-2">
+          {(['all', 'trusted', 'watch', 'noise'] as const).map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`text-xs px-4 py-1.5 rounded-full border transition-all ${
+                filter === f
+                  ? 'bg-periwinkle border-periwinkle text-white'
+                  : 'bg-mesa-light/60 border-periwinkle/20 text-sand/50 hover:border-periwinkle/40'
+              }`}>
+              {f}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-sand/30">channels auto-populate as the pipeline runs</p>
+      </div>
+
+      {/* list */}
+      {loading ? (
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-16 bg-mesa-light/40 rounded-xl animate-pulse" />
+          ))}
+        </div>
+      ) : shown.length === 0 ? (
+        <p className="text-sand/30 text-sm py-8 text-center">
+          {channels.length === 0
+            ? 'no channels yet. run the pipeline and they will appear here automatically.'
+            : 'no channels in this tier.'}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {shown.map(c => {
+            const meta = TIER_META[c.tier]
+            const passPercent = c.videoCount > 0 ? Math.round(c.passRate * 100) : null
+            const lastSeen = c.lastSeen
+              ? new Date(c.lastSeen.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              : null
+            return (
+              <div key={c.channelId}
+                className="flex items-center gap-4 bg-mesa-light/50 border border-periwinkle/10 rounded-xl px-5 py-3.5 hover:border-periwinkle/20 transition-colors">
+
+                {/* name + stats */}
+                <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-white/80 truncate">{c.channelName}</span>
+                    {c.addedBy === 'admin' && (
+                      <span className="text-[10px] text-periwinkle/40 shrink-0">admin</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-sand/35">
+                    <span>{c.videoCount} video{c.videoCount !== 1 ? 's' : ''}</span>
+                    {c.videoCount > 0 && (
+                      <>
+                        <span>avg {c.avgScore.toFixed(1)}</span>
+                        <span className={passPercent !== null && passPercent >= 50 ? 'text-desert-sky/50' : 'text-red-rock/50'}>
+                          {passPercent}% pass
+                        </span>
+                      </>
+                    )}
+                    {lastSeen && <span>last seen {lastSeen}</span>}
+                  </div>
+                </div>
+
+                {/* tier buttons */}
+                <div className="flex gap-1.5 shrink-0">
+                  {(Object.keys(TIER_META) as ChannelTier[]).map(tier => (
+                    <button
+                      key={tier}
+                      disabled={updating === c.channelId || c.tier === tier}
+                      onClick={() => handleTier(c.channelId, tier)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-all disabled:cursor-default ${
+                        c.tier === tier
+                          ? TIER_META[tier].cls + ' font-medium'
+                          : 'border-periwinkle/15 text-sand/30 hover:border-periwinkle/35 hover:text-sand/60'
+                      }`}
+                    >
+                      {tier}
+                    </button>
+                  ))}
+                </div>
               </div>
             )
           })}

@@ -124,8 +124,122 @@ async function fetchRecentVideos(queries = DEFAULT_SEARCH_QUERIES, maxPerQuery =
   return results
 }
 
+// ── Clickbait pre-filter ──────────────────────────────────────────────────────
+
+const HARD_FAIL_PHRASES = [
+  'THEY DON\'T WANT YOU TO KNOW',
+  'WHAT THEY\'RE HIDING',
+  'WATCH BEFORE IT\'S DELETED',
+  'BANNED VIDEO',
+  'PREPARE NOW',
+  'THEY ARE COMING',
+  'THE DEEP STATE',
+  'WAKE UP SHEEPLE',
+  'THEY WILL SILENCE',
+  'THIS WILL BE REMOVED',
+  'SECRET THEY HID',
+]
+
+const SOFT_PENALTY_PHRASES = [
+  'EXPLOSIVE',
+  'BOMBSHELL',
+  'SHOCKING TRUTH',
+  'MIND BLOWING',
+  'MIND-BLOWING',
+  'MUST WATCH',
+  'YOU WON\'T BELIEVE',
+  'WAIT UNTIL YOU SEE',
+  'THEY ADMITTED',
+  'FINALLY CONFIRMED',
+  'IT\'S HAPPENING',
+  '(MUST SEE)',
+  'GAME CHANGER',
+  'EVERYTHING CHANGES',
+]
+
+function clickbaitPreFilter(title) {
+  const upper = title.toUpperCase()
+
+  // hard fail
+  for (const phrase of HARD_FAIL_PHRASES) {
+    if (upper.includes(phrase)) {
+      return { pass: false, reason: `hard-fail phrase: "${phrase}"`, flags: [] }
+    }
+  }
+
+  // soft flags
+  const flags = []
+
+  // caps ratio (letters only, ignore short titles)
+  const letters = title.replace(/[^a-zA-Z]/g, '')
+  if (letters.length > 15) {
+    const capsRatio = title.replace(/[^A-Z]/g, '').length / letters.length
+    if (capsRatio > 0.6) flags.push('excessive caps')
+  }
+
+  // emoji count
+  const emojiCount = (title.match(/\p{Emoji_Presentation}/gu) || []).length
+  if (emojiCount > 2) flags.push(`${emojiCount} emojis`)
+
+  // soft phrases
+  for (const phrase of SOFT_PENALTY_PHRASES) {
+    if (upper.includes(phrase)) { flags.push(`"${phrase}"`); break }
+  }
+
+  return { pass: true, flags }
+}
+
+// ── Channel roster ────────────────────────────────────────────────────────────
+
+async function getChannelTier(channelId) {
+  try {
+    const snap = await db.collection('channels').doc(channelId).get()
+    return snap.exists ? snap.data().tier : null
+  } catch { return null }
+}
+
+async function updateChannelStats(channelId, channelName, overall, passed) {
+  const ref = db.collection('channels').doc(channelId)
+  try {
+    const snap = await ref.get()
+    if (!snap.exists) {
+      await ref.set({
+        channelId,
+        channelName,
+        tier: 'watch',
+        addedBy: 'auto',
+        avgScore: overall,
+        passRate: passed ? 1 : 0,
+        videoCount: 1,
+        lastSeen: FieldValue.serverTimestamp(),
+        notes: '',
+      })
+    } else {
+      const d = snap.data()
+      const n = d.videoCount + 1
+      await ref.update({
+        channelName,
+        avgScore: ((d.avgScore * d.videoCount) + overall) / n,
+        passRate: ((d.passRate * d.videoCount) + (passed ? 1 : 0)) / n,
+        videoCount: FieldValue.increment(1),
+        lastSeen: FieldValue.serverTimestamp(),
+      })
+    }
+  } catch (err) {
+    console.error(`Channel stats update failed for ${channelName}: ${err.message}`)
+  }
+}
+
 // ── Scoring ───────────────────────────────────────────────────────────────────
-async function scoreVideo(title, description, channelName, publishedAt) {
+async function scoreVideo(title, description, channelName, publishedAt, channelTier, clickbaitFlags) {
+  const tierNote = channelTier === 'trusted'
+    ? `\nCHANNEL NOTE: "${channelName}" is a trusted source in our roster. Weight credibility accordingly.`
+    : ''
+
+  const flagNote = clickbaitFlags.length > 0
+    ? `\nCLICKBAIT FLAGS: The title triggered these signals: ${clickbaitFlags.join(', ')}. Factor this into signal density.`
+    : ''
+
   const prompt = `
 You are the curation engine for Clear the Signal — a platform dedicated to positive consciousness expansion, synchronicity, manifestation, collective evolution, and credible exploration of energy, awareness, and human potential.
 
@@ -137,13 +251,13 @@ VIDEO DETAILS:
 Title: ${title}
 Channel: ${channelName}
 Published: ${publishedAt}
-Description: ${description}
+Description: ${description}${tierNote}${flagNote}
 
 SCORING DIMENSIONS:
 1. NOVELTY (1-5): Is this genuinely new information/perspective, or a rehash of widely covered content?
 2. CREDIBILITY (1-5): Is the source/channel credible? Does it cite evidence or experience?
 3. TONE ALIGNMENT (1-5): Is the tone positive, expansive, and constructive? (1=fear/doom/division, 5=uplifting/expansive)
-4. SIGNAL DENSITY (1-5): How much genuine substance vs filler/clickbait?
+4. SIGNAL DENSITY (1-5): How much genuine substance vs filler/clickbait? Titles with clickbait framing should score lower here even if the content may be worthwhile.
 5. TIMING RELEVANCE (1-5): Is this timely and relevant to current community interests?
 
 Also provide:
@@ -186,24 +300,63 @@ async function runPipeline() {
   let passed = 0
   let failed = 0
   let skipped = 0
+  let preFiltered = 0
 
   for (const video of videos) {
     const ref = db.collection('videos').doc(video.videoId)
     const existing = await ref.get()
 
     if (existing.exists) {
-      console.log(`Skipping already scored: ${video.title}`)
+      console.log(`  SKIP (already scored): ${video.title}`)
       skipped++
       continue
     }
 
+    // channel tier check
+    const channelTier = await getChannelTier(video.channelId)
+    if (channelTier === 'noise') {
+      console.log(`  SKIP (noise channel): ${video.channelName} — ${video.title}`)
+      await ref.set({
+        ...video,
+        scores: { novelty: 0, credibility: 0, toneAlignment: 0, signalDensity: 0, timingRelevance: 0, overall: 0 },
+        scoreRationale: `Channel "${video.channelName}" is on the noise list.`,
+        passed: false,
+        tags: [],
+        preFiltered: true,
+        preFilterReason: 'noise channel',
+        scoredAt: FieldValue.serverTimestamp(),
+      })
+      preFiltered++
+      continue
+    }
+
+    // clickbait pre-filter
+    const preCheck = clickbaitPreFilter(video.title)
+    if (!preCheck.pass) {
+      console.log(`  PRE-FILTERED (${preCheck.reason}): ${video.title}`)
+      await ref.set({
+        ...video,
+        scores: { novelty: 0, credibility: 0, toneAlignment: 0, signalDensity: 0, timingRelevance: 0, overall: 0 },
+        scoreRationale: `Pre-filtered: ${preCheck.reason}`,
+        passed: false,
+        tags: [],
+        preFiltered: true,
+        preFilterReason: preCheck.reason,
+        scoredAt: FieldValue.serverTimestamp(),
+      })
+      preFiltered++
+      continue
+    }
+
     try {
-      console.log(`Scoring: ${video.title}`)
+      console.log(`  SCORING: ${video.title}`)
       const scorecard = await scoreVideo(
         video.title,
         video.description,
         video.channelName,
-        video.publishedAt
+        video.publishedAt,
+        channelTier,
+        preCheck.flags,
       )
 
       await ref.set({
@@ -219,19 +372,22 @@ async function runPipeline() {
         scoreRationale: scorecard.rationale,
         passed: scorecard.passed,
         tags: scorecard.tags,
+        preFiltered: false,
         scoredAt: FieldValue.serverTimestamp(),
       })
 
+      await updateChannelStats(video.channelId, video.channelName, scorecard.overall, scorecard.passed)
+
       scorecard.passed ? passed++ : failed++
-      console.log(`Score: ${scorecard.overall} — ${scorecard.passed ? 'PASSED' : 'FILTERED'} — ${video.title}`)
+      console.log(`  ${scorecard.passed ? 'PASSED' : 'FILTERED'} (${scorecard.overall}) ${preCheck.flags.length ? '[flags: ' + preCheck.flags.join(', ') + ']' : ''}: ${video.title}`)
     } catch (err) {
-      console.error(`Failed to score "${video.title}": ${err.message}`)
+      console.error(`  ERROR scoring "${video.title}": ${err.message}`)
     }
 
     await new Promise(r => setTimeout(r, 500))
   }
 
-  console.log(`\nPipeline complete — ${passed} passed, ${failed} filtered, ${skipped} skipped`)
+  console.log(`\nPipeline complete — ${passed} passed, ${failed} filtered, ${preFiltered} pre-filtered, ${skipped} skipped`)
 }
 
 runPipeline().catch(err => {

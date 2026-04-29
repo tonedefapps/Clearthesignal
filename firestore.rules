@@ -26,6 +26,13 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'mod'];
     }
 
+    // Channel roster: anyone can read; admins and mods can write
+    match /channels/{channelId} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'mod'];
+    }
+
     // Deny everything else
     match /{document=**} {
       allow read, write: if false;
