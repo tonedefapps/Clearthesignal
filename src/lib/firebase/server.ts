@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
   collection,
   query,
   where,
@@ -11,6 +12,7 @@ import {
   limit,
   getDocs,
   serverTimestamp,
+  increment,
   DocumentData,
   Query,
   CollectionReference,
@@ -33,5 +35,5 @@ export function getDb() {
   return getFirestore(getApp())
 }
 
-export { doc, getDoc, setDoc, collection, query, where, orderBy, limit, getDocs, serverTimestamp }
+export { doc, getDoc, setDoc, updateDoc, collection, query, where, orderBy, limit, getDocs, serverTimestamp, increment }
 export type { DocumentData, Query, CollectionReference }

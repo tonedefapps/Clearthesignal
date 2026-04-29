@@ -656,6 +656,7 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
   const [videoUrl, setVideoUrl] = useState('')
   const [videoMeta, setVideoMeta] = useState<any>(null)
   const [videoTags, setVideoTags] = useState<string[]>([])
+  const [videoRationale, setVideoRationale] = useState('')
   const [fetching, setFetching] = useState(false)
   const [adding, setAdding] = useState(false)
   const [videoError, setVideoError] = useState('')
@@ -669,7 +670,7 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
 
   async function handleFetchVideo(e: React.FormEvent) {
     e.preventDefault()
-    setVideoError(''); setVideoMeta(null); setVideoTags([])
+    setVideoError(''); setVideoMeta(null); setVideoTags([]); setVideoRationale('')
     setFetching(true)
     try {
       const res = await fetch('/api/admin/add-video', {
@@ -692,11 +693,11 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
       await setDoc(doc(db, 'videos', videoMeta.videoId), {
         ...videoMeta,
         scores: { novelty: 5, credibility: 5, toneAlignment: 5, signalDensity: 5, timingRelevance: 5, overall: 5 },
-        scoreRationale: 'Manually curated by the team.',
+        scoreRationale: videoRationale.trim() || 'Manually curated by the team.',
         passed: true, status: 'approved', tags: videoTags, scoredAt: serverTimestamp(), manuallyAdded: true,
       })
       setVideoSuccess('added to feed.')
-      setVideoUrl(''); setVideoMeta(null); setVideoTags([])
+      setVideoUrl(''); setVideoMeta(null); setVideoTags([]); setVideoRationale('')
       setTimeout(() => setVideoSuccess(''), 4000)
       getRecentVideos(30).then(setVideos).catch(() => {})
     } catch (err: unknown) {
@@ -738,6 +739,15 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
                   className="text-xs text-periwinkle/50 hover:text-periwinkle transition-colors mt-1">{videoMeta.youtubeUrl}</a>
               </div>
             </div>
+            <Field label="signal note">
+              <textarea
+                value={videoRationale}
+                onChange={e => setVideoRationale(e.target.value)}
+                placeholder="why does this belong in the signal? shown on the video page..."
+                rows={3}
+                className={`${inputCls} resize-none`}
+              />
+            </Field>
             <TagPicker selected={videoTags} onToggle={t => setVideoTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])} />
             <button type="submit" disabled={adding}
               className="self-start bg-periwinkle hover:bg-periwinkle-light text-white font-medium px-8 py-3 rounded-xl transition-colors text-sm disabled:opacity-50">
