@@ -83,6 +83,21 @@ const DEFAULT_SEARCH_QUERIES = [
   'disappeared scientists advanced technology',
 ]
 
+// ── HTML entity decoder ───────────────────────────────────────────────────────
+
+function decodeHtml(str) {
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/')
+    .trim()
+}
+
 // ── YouTube fetch ─────────────────────────────────────────────────────────────
 async function fetchRecentVideos(queries = DEFAULT_SEARCH_QUERIES, maxPerQuery = 5) {
   const results = []
@@ -107,9 +122,9 @@ async function fetchRecentVideos(queries = DEFAULT_SEARCH_QUERIES, maxPerQuery =
 
         results.push({
           videoId,
-          title: item.snippet?.title || '',
-          description: item.snippet?.description || '',
-          channelName: item.snippet?.channelTitle || '',
+          title: decodeHtml(item.snippet?.title || ''),
+          description: decodeHtml(item.snippet?.description || ''),
+          channelName: decodeHtml(item.snippet?.channelTitle || ''),
           channelId: item.snippet?.channelId || '',
           publishedAt: item.snippet?.publishedAt || '',
           thumbnailUrl: item.snippet?.thumbnails?.high?.url || '',
