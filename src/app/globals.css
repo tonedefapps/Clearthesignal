@@ -17,6 +17,10 @@
   --color-redrock-light:    #d4845a;
   --color-red-rock-light:   #d4845a;
 
+  /* orb / warm accent */
+  --color-sun:              #c8a84b;
+  --color-sun-light:        #e8d090;
+
   /* text & highlights */
   --color-sky-desert:       #a8c4e0;
   --color-desert-sky:       #a8c4e0;
@@ -138,4 +142,22 @@ h1, h2, h3, h4, nav a, button, .label {
 
 p, li, td {
   text-transform: none;
+}
+
+/* film grain overlay — breaks up flat surfaces, integrates with the starfield */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  opacity: 0.04;
+  mix-blend-mode: soft-light;
+}
+
+/* single shadow token — same depth used on all elevated surfaces */
+@utility shadow-card {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.32);
 }

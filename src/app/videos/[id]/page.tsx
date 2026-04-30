@@ -78,7 +78,7 @@ export default async function VideoDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="bg-mesa-light border border-white/8 rounded-2xl p-5">
+            <div className="bg-mesa-light border border-white/8 rounded-2xl p-5 shadow-card">
               <p className="text-xs text-periwinkle/70 font-bold tracking-widest mb-2 uppercase">Why this passed</p>
               <p className="text-sand/70 leading-relaxed text-sm">{video.scoreRationale}</p>
             </div>
@@ -98,7 +98,7 @@ export default async function VideoDetailPage({ params }: PageProps) {
             )}
           </div>
 
-          <div className="bg-mesa-light border border-white/8 rounded-2xl p-5 flex flex-col gap-5 h-fit">
+          <div className="bg-mesa-light border border-white/8 rounded-2xl p-5 flex flex-col gap-5 h-fit shadow-card">
             <div className="flex items-baseline justify-between">
               <p className="text-xs text-sand/40 font-bold tracking-widest uppercase">Signal Score</p>
               <p className="text-2xl font-bold text-periwinkle-light">{video.scores?.overall?.toFixed(1)}</p>

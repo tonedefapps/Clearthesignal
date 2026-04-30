@@ -44,9 +44,9 @@ export function SpiralIcon({ size = 24, className }: SpiralIconProps) {
       <circle cx="101" cy="44"  r="2.5" fill="#a8c4e0" opacity="0.85"/>
 
       <circle cx="60" cy="60" r="12"  fill="#1e1e35"/>
-      <circle cx="60" cy="60" r="9"   fill="#6b6fad" opacity="0.18"/>
-      <circle cx="60" cy="60" r="5.5" fill="#8f93c9" opacity="0.55"/>
-      <circle cx="60" cy="60" r="2.5" fill="#a8c4e0" opacity="0.98"/>
+      <circle cx="60" cy="60" r="9"   fill="#c8a84b" opacity="0.22"/>
+      <circle cx="60" cy="60" r="5.5" fill="#d4b85a" opacity="0.65"/>
+      <circle cx="60" cy="60" r="2.5" fill="#e8d090" opacity="0.98"/>
     </svg>
   )
 }
@@ -79,9 +79,9 @@ export function HorizontalLockup({ height = 48, className }: { height?: number; 
         <circle cx="30"  cy="60"  r="3"   fill="#a8c4e0" opacity="0.92"/>
         <circle cx="101" cy="44"  r="2.6" fill="#a8c4e0" opacity="0.85"/>
         <circle cx="60"  cy="60"  r="13"  fill="#1e1e35"/>
-        <circle cx="60"  cy="60"  r="10"  fill="#6b6fad" opacity="0.18"/>
-        <circle cx="60"  cy="60"  r="6"   fill="#8f93c9" opacity="0.55"/>
-        <circle cx="60"  cy="60"  r="2.8" fill="#a8c4e0" opacity="0.98"/>
+        <circle cx="60"  cy="60"  r="10"  fill="#c8a84b" opacity="0.22"/>
+        <circle cx="60"  cy="60"  r="6"   fill="#d4b85a" opacity="0.65"/>
+        <circle cx="60"  cy="60"  r="2.8" fill="#e8d090" opacity="0.98"/>
         <circle cx="18"  cy="22"  r="1.2" fill="#d4c4a8" opacity="0.16"/>
         <circle cx="95"  cy="18"  r="1"   fill="#d4c4a8" opacity="0.13"/>
         <circle cx="104" cy="88"  r="1.2" fill="#d4c4a8" opacity="0.14"/>

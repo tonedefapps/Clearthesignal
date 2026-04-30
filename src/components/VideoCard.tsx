@@ -73,7 +73,7 @@ export default function VideoCard({
       href={`/v/${id}`}
       onMouseEnter={() => onHoverTags?.(tags ?? [])}
       onMouseLeave={() => onLeaveTags?.()}
-      className="group relative flex flex-col w-[270px] sm:w-[300px] shrink-0 bg-mesa-light border border-periwinkle/15 rounded-2xl overflow-hidden hover:border-periwinkle/40 transition-all duration-200 scroll-snap-align-start"
+      className="group relative flex flex-col w-[270px] sm:w-[300px] shrink-0 bg-mesa-light border border-periwinkle/15 rounded-2xl overflow-hidden hover:border-periwinkle/40 transition-all duration-200 snap-start shadow-card"
     >
       {/* thumbnail */}
       <div className="relative aspect-video overflow-hidden bg-white/5">

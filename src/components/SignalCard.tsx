@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { SignalPost } from '@/lib/firebase/signal'
 
 interface SignalCardProps {
@@ -13,7 +14,7 @@ export default function SignalCard({ post, onDelete }: SignalCardProps) {
     : ''
 
   return (
-    <div className="w-[300px] sm:w-[340px] shrink-0 bg-mesa-light/70 border border-periwinkle/15 rounded-2xl p-5 flex flex-col gap-3 scroll-snap-align-start">
+    <div className="w-full bg-mesa-light/70 border border-periwinkle/15 rounded-2xl p-5 flex flex-col gap-3 shadow-card">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs text-desert-sky/70 font-medium tracking-wide truncate">
           {post.source}
@@ -21,14 +22,12 @@ export default function SignalCard({ post, onDelete }: SignalCardProps) {
         <span className="text-xs text-sand/30 whitespace-nowrap">{date}</span>
       </div>
 
-      <a
-        href={post.url}
-        target="_blank"
-        rel="noopener noreferrer"
+      <Link
+        href={`/signal/${post.id}`}
         className="text-sm font-medium text-white/90 leading-snug hover:text-desert-sky transition-colors line-clamp-3"
       >
         {post.headline}
-      </a>
+      </Link>
 
       {post.note && (
         <p className="text-xs text-sand/55 leading-relaxed line-clamp-3">{post.note}</p>
@@ -45,7 +44,7 @@ export default function SignalCard({ post, onDelete }: SignalCardProps) {
             </span>
           ))}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
           <a
             href={post.url}
             target="_blank"
@@ -54,6 +53,12 @@ export default function SignalCard({ post, onDelete }: SignalCardProps) {
           >
             read →
           </a>
+          <Link
+            href={`/signal/${post.id}`}
+            className="text-xs text-sand/35 hover:text-sand/60 transition-colors"
+          >
+            discuss
+          </Link>
           {onDelete && (
             <button
               onClick={() => onDelete(post.id)}

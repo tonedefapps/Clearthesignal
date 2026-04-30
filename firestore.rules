@@ -24,6 +24,15 @@ service cloud.firestore {
       allow read: if true;
       allow write, delete: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'mod'];
+
+      // Comments: anyone can read; authenticated users can create;
+      // admins/mods can soft-delete (update) or hard-delete any comment
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+        allow update, delete: if request.auth != null &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'mod'];
+      }
     }
 
     // Channel roster: anyone can read; admins and mods can write
