@@ -277,6 +277,8 @@ Channel: ${channelName}
 Published: ${publishedAt}
 Description: ${description}${tierNote}${flagNote}
 
+LANGUAGE CHECK: If the title, description, or channel name indicates this content is primarily in a language other than English, set passed: false and note the language in rationale. Do not score non-English content.
+
 SCORING DIMENSIONS:
 1. NOVELTY (1-5): Is this genuinely new information/perspective, or a rehash of widely covered content?
 2. CREDIBILITY (1-5): Is the source/channel credible? Does it cite evidence or experience?
