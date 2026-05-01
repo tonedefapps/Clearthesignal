@@ -215,8 +215,15 @@ async function handlePost(req: NextRequest) {
   // Fetch transcript — admin-provided context wins, then transcript, then stored description, then knowledge
   let contentBlock: string
   if (context) {
-    contentBlock = `CONTEXT (provided by editor — NO TIMESTAMPS AVAILABLE, omit timestamp prefix from items):\n${context.slice(0, 40000)}`
-    console.log('[amplified] using admin-provided context')
+    // Context prefetched from edge route (has [M:SS] markers) or pasted manually by admin
+    const hasTimestamps = /\[\d+:\d+\]/.test(context.slice(0, 500))
+    if (hasTimestamps) {
+      contentBlock = `TRANSCRIPT (with timestamps):\n${context.slice(0, 40000)}`
+      console.log('[amplified] using edge-fetched transcript as context')
+    } else {
+      contentBlock = `CONTEXT (provided by editor — NO TIMESTAMPS AVAILABLE, omit timestamp prefix from items):\n${context.slice(0, 40000)}`
+      console.log('[amplified] using admin-provided context')
+    }
   } else {
     const segments = await fetchYoutubeTranscript(videoId)
     if (segments && segments.length > 0) {

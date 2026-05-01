@@ -772,10 +772,21 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
     setShowContextInput(false)
     try {
       const token = await user.getIdToken()
+
+      // Fetch transcript from Edge route (Cloudflare IPs — bypasses YouTube's cloud IP blocks)
+      let transcriptContext: string | undefined = contextText.trim() || undefined
+      if (!transcriptContext) {
+        const txRes = await fetch(`/api/youtube-transcript?videoId=${videoId}`)
+        if (txRes.ok) {
+          const txData = await txRes.json()
+          if (txData.transcript) transcriptContext = txData.transcript
+        }
+      }
+
       const res = await fetch('/api/admin/generate-amplified', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ videoId, context: contextText.trim() || undefined }),
+        body: JSON.stringify({ videoId, context: transcriptContext }),
       })
       const data = await res.json()
       if (!res.ok) {
