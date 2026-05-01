@@ -52,7 +52,15 @@ export async function POST(req: NextRequest) {
     const segments = await YoutubeTranscript.fetchTranscript(videoId)
     transcriptText = segments.map(s => s.text).join(' ').slice(0, 40000)
   } catch {
-    return NextResponse.json({ error: 'no_transcript' }, { status: 422 })
+    // Fall back to YouTube video description
+    const ytRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${process.env.YOUTUBE_API_KEY}`
+    )
+    if (!ytRes.ok) return NextResponse.json({ error: 'no_transcript' }, { status: 422 })
+    const ytData = await ytRes.json()
+    const description: string | undefined = ytData.items?.[0]?.snippet?.description
+    if (!description?.trim()) return NextResponse.json({ error: 'no_transcript' }, { status: 422 })
+    transcriptText = description.slice(0, 40000)
   }
 
   const message = await anthropic.messages.create({
