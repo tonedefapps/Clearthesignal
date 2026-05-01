@@ -142,6 +142,14 @@ async function fetchRecentVideos(queries = DEFAULT_SEARCH_QUERIES, maxPerQuery =
 // ── Language pre-filter ───────────────────────────────────────────────────────
 
 function isLikelyEnglish(title) {
+  // ñ, ¿, ¡ are near-exclusive Spanish/Latin markers — hard reject
+  if (/[ñÑ¿¡]/.test(title)) return false
+
+  // two or more accented Romance vowels = likely Spanish/Portuguese/French
+  const accented = (title.match(/[áéíóúàèìòùÁÉÍÓÚÀÈÌÒÙ]/g) || []).length
+  if (accented >= 2) return false
+
+  // non-Latin script check (Chinese, Arabic, Cyrillic, etc.)
   const stripped = title.replace(/\s/g, '')
   if (stripped.length === 0) return true
   const nonLatin = (stripped.match(/[^\x00-\x7FÀ-ɏ]/g) || []).length
@@ -265,6 +273,10 @@ async function scoreVideo(title, description, channelName, publishedAt, channelT
     : ''
 
   const prompt = `
+LANGUAGE GATE (check this first, before anything else): Read the title, channel name, and description. If the video is primarily in Spanish, Portuguese, French, or any language other than English — stop immediately and respond with all dimension scores set to 1, passed: false, and rationale: "Non-English content filtered: [detected language]." Do not proceed to scoring.
+
+---
+
 You are the curation engine for Clear the Signal — a platform dedicated to positive consciousness expansion, synchronicity, manifestation, collective evolution, and credible exploration of energy, awareness, and human potential.
 
 Your job is to score YouTube videos on whether they belong in our curated feed. We filter noise and strengthen signal. We are NOT a conspiracy platform. We DO NOT amplify fear, doom, division, or unfalsifiable claims. We lean into positivity, credibility, and genuine new insight.
@@ -276,8 +288,6 @@ Title: ${title}
 Channel: ${channelName}
 Published: ${publishedAt}
 Description: ${description}${tierNote}${flagNote}
-
-LANGUAGE CHECK: If the title, description, or channel name indicates this content is primarily in a language other than English, set passed: false and note the language in rationale. Do not score non-English content.
 
 SCORING DIMENSIONS:
 1. NOVELTY (1-5): Is this genuinely new information/perspective, or a rehash of widely covered content?
