@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { createSignalPost, deleteSignalPost, getSignalPosts, type SignalPost } from '@/lib/firebase/signal'
-import { getRecentVideos, removeVideo, getVideoStats, approveVideo, rejectVideo, setSpotlight, type VideoSummary } from '@/lib/firebase/videos'
+import { getRecentVideos, removeVideo, getVideoStats, approveVideo, rejectVideo, setAmplified, getAmplifiedVideo, updateAmplifiedAnalysis, type VideoSummary } from '@/lib/firebase/videos'
 import { getUserByEmail, setUserRole, getTeamMembers, type UserProfile } from '@/lib/firebase/users'
 import { getChannels, setChannelTier, type ChannelRecord, type ChannelTier } from '@/lib/firebase/channels'
 import { CANONICAL_TAGS } from '@/lib/constants/tags'
-import { getDb, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from '@/lib/firebase/server'
+import { getDb, doc, getDoc, setDoc, updateDoc, serverTimestamp } from '@/lib/firebase/server'
 import SiteNav from '@/components/SiteNav'
 
 type Tab = 'overview' | 'pipeline' | 'channels' | 'dispatch' | 'feed' | 'team'
@@ -663,125 +663,21 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
   const [videoSuccess, setVideoSuccess] = useState('')
   const [videos, setVideos] = useState<VideoSummary[]>([])
   const [videosLoading, setVideosLoading] = useState(true)
-  const [spotlightId, setSpotlightId] = useState<string | null>(null)
-  const [generating, setGenerating] = useState<string | null>(null)
-  const [publishing, setPublishing] = useState(false)
-  // draft = staged, not yet live; published = live on homepage
-  const [draftAnalysis, setDraftAnalysis] = useState<Record<string, { label: string; claims: string[]; date: string }>>({})
-  const [publishedAnalysis, setPublishedAnalysis] = useState<Record<string, { label: string; claims: string[]; date: string }>>({})
-  const [spotlightError, setSpotlightError] = useState<Record<string, string>>({})
-  const [editMode, setEditMode] = useState<{ videoId: string; target: 'draft' | 'live' } | null>(null)
+  const [amplifiedId, setAmplifiedId] = useState<string | null>(null)
+  const [amplifyingId, setAmplifyingId] = useState<string | null>(null)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [generateStatus, setGenerateStatus] = useState<Record<string, { label: string; count: number; date: string; source?: string; items: Array<{ text: string; ts?: string }> } | 'error' | 'no_transcript'>>({})
+  const [editingAnalysis, setEditingAnalysis] = useState(false)
   const [editLabel, setEditLabel] = useState('')
-  const [editClaims, setEditClaims] = useState<string[]>([])
-  const [savingEdit, setSavingEdit] = useState(false)
-
-  function fmtDate(ts?: { seconds: number }) {
-    if (!ts) return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    return new Date(ts.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
+  const [editItems, setEditItems] = useState<string[]>([])
+  const [savingAnalysis, setSavingAnalysis] = useState(false)
+  const [contextText, setContextText] = useState('')
+  const [showContextInput, setShowContextInput] = useState(false)
 
   useEffect(() => {
-    getRecentVideos(30).then(vs => {
-      setVideos(vs)
-      setSpotlightId(vs.find(v => v.spotlight)?.id ?? null)
-      const drafts: Record<string, { label: string; claims: string[]; date: string }> = {}
-      const published: Record<string, { label: string; claims: string[]; date: string }> = {}
-      vs.forEach(v => {
-        if (v.spotlightDraft)
-          drafts[v.id] = { label: v.spotlightDraft.label, claims: v.spotlightDraft.claims, date: fmtDate(v.spotlightDraft.generatedAt) }
-        if (v.spotlightAnalysis)
-          published[v.id] = { label: v.spotlightAnalysis.label, claims: v.spotlightAnalysis.claims, date: fmtDate(v.spotlightAnalysis.generatedAt) }
-      })
-      setDraftAnalysis(drafts)
-      setPublishedAnalysis(published)
-    }).catch(() => {}).finally(() => setVideosLoading(false))
+    getRecentVideos(30).then(setVideos).catch(() => {}).finally(() => setVideosLoading(false))
+    getAmplifiedVideo().then(v => { if (v) setAmplifiedId(v.id) }).catch(() => {})
   }, [])
-
-  async function handleSetSpotlight(videoId: string) {
-    await setSpotlight(videoId)
-    setSpotlightId(videoId)
-    setVideos(prev => prev.map(v => ({ ...v, spotlight: v.id === videoId })))
-  }
-
-  async function handleGenerateAnalysis(videoId: string) {
-    if (!user) return
-    setGenerating(videoId)
-    setSpotlightError(prev => ({ ...prev, [videoId]: '' }))
-    try {
-      const token = await user.getIdToken()
-      const res = await fetch('/api/admin/generate-spotlight', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ videoId }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setSpotlightError(prev => ({
-          ...prev,
-          [videoId]: data.error === 'no_transcript' ? 'no transcript available' : 'generation failed',
-        }))
-      } else {
-        await updateDoc(doc(getDb(), 'videos', videoId), {
-          spotlightDraft: { label: data.label, claims: data.claims, generatedAt: serverTimestamp() },
-        })
-        const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        setDraftAnalysis(prev => ({ ...prev, [videoId]: { label: data.label, claims: data.claims, date } }))
-      }
-    } catch {
-      setSpotlightError(prev => ({ ...prev, [videoId]: 'generation failed' }))
-    } finally {
-      setGenerating(null)
-    }
-  }
-
-  async function handlePublish(videoId: string) {
-    const draft = draftAnalysis[videoId]
-    if (!draft) return
-    setPublishing(true)
-    try {
-      await updateDoc(doc(getDb(), 'videos', videoId), {
-        spotlightAnalysis: { label: draft.label, claims: draft.claims, generatedAt: serverTimestamp() },
-        spotlightDraft: deleteField(),
-      })
-      setPublishedAnalysis(prev => ({ ...prev, [videoId]: { ...draft, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } }))
-      setDraftAnalysis(prev => { const next = { ...prev }; delete next[videoId]; return next })
-    } finally {
-      setPublishing(false)
-    }
-  }
-
-  function handleStartEdit(videoId: string, target: 'draft' | 'live') {
-    const source = target === 'draft' ? draftAnalysis[videoId] : publishedAnalysis[videoId]
-    if (!source) return
-    setEditLabel(source.label)
-    setEditClaims(source.claims)
-    setEditMode({ videoId, target })
-  }
-
-  async function handleSaveEdit() {
-    if (!editMode) return
-    const { videoId, target } = editMode
-    const cleanedClaims = editClaims.map(c => c.trim()).filter(Boolean)
-    setSavingEdit(true)
-    try {
-      if (target === 'draft') {
-        await updateDoc(doc(getDb(), 'videos', videoId), {
-          'spotlightDraft.label': editLabel.trim(),
-          'spotlightDraft.claims': cleanedClaims,
-        })
-        setDraftAnalysis(prev => ({ ...prev, [videoId]: { ...prev[videoId], label: editLabel.trim(), claims: cleanedClaims } }))
-      } else {
-        await updateDoc(doc(getDb(), 'videos', videoId), {
-          'spotlightAnalysis.label': editLabel.trim(),
-          'spotlightAnalysis.claims': cleanedClaims,
-        })
-        setPublishedAnalysis(prev => ({ ...prev, [videoId]: { ...prev[videoId], label: editLabel.trim(), claims: cleanedClaims } }))
-      }
-      setEditMode(null)
-    } finally {
-      setSavingEdit(false)
-    }
-  }
 
   async function handleFetchVideo(e: React.FormEvent) {
     e.preventDefault()
@@ -824,6 +720,85 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
     if (!confirm(`remove "${title}" from the feed?`)) return
     await removeVideo(videoId)
     setVideos(prev => prev.filter(v => v.id !== videoId))
+  }
+
+  async function handleAmplify(videoId: string) {
+    setAmplifyingId(videoId)
+    try {
+      await setAmplified(videoId)
+      setAmplifiedId(videoId)
+    } catch { /* ignore */ }
+    finally { setAmplifyingId(null) }
+  }
+
+  function normalizeItems(items: Array<string | { text: string; ts?: string }>): string[] {
+    return items.map(i => {
+      if (typeof i === 'string') return i
+      return i.ts ? `[${i.ts}] ${i.text}` : i.text
+    })
+  }
+
+  function startEditAnalysis(analysis: { label: string; items: Array<string | { text: string; ts?: string }> }) {
+    setEditLabel(analysis.label)
+    setEditItems(normalizeItems(analysis.items))
+    setEditingAnalysis(true)
+  }
+
+  async function saveAnalysis(videoId: string) {
+    setSavingAnalysis(true)
+    try {
+      const items = editItems.map(i => i.trim()).filter(Boolean)
+      await updateAmplifiedAnalysis(videoId, { label: editLabel.trim(), items })
+      setVideos(prev => prev.map(v =>
+        v.id === videoId && v.amplifiedAnalysis
+          ? { ...v, amplifiedAnalysis: { ...v.amplifiedAnalysis, label: editLabel.trim(), items } }
+          : v
+      ))
+      setGenerateStatus(prev => {
+        const cur = prev[videoId]
+        if (cur && typeof cur === 'object') {
+          return { ...prev, [videoId]: { ...cur, label: editLabel.trim(), count: items.length } }
+        }
+        return prev
+      })
+      setEditingAnalysis(false)
+    } catch { /* ignore */ }
+    finally { setSavingAnalysis(false) }
+  }
+
+  async function handleGenerate(videoId: string) {
+    if (!user) return
+    setGeneratingId(videoId)
+    setShowContextInput(false)
+    try {
+      const token = await user.getIdToken()
+      const res = await fetch('/api/admin/generate-amplified', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ videoId, context: contextText.trim() || undefined }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setGenerateStatus(prev => ({ ...prev, [videoId]: data.error === 'no_content' ? 'no_transcript' : 'error' }))
+        return
+      }
+      const items: Array<{ text: string; ts?: string }> = data.items ?? []
+      setGenerateStatus(prev => ({
+        ...prev,
+        [videoId]: {
+          label: data.label,
+          count: items.length,
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          source: data.source,
+          items,
+        },
+      }))
+      startEditAnalysis({ label: data.label, items })
+    } catch {
+      setGenerateStatus(prev => ({ ...prev, [videoId]: 'error' }))
+    } finally {
+      setGeneratingId(null)
+    }
   }
 
   return (
@@ -888,22 +863,21 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
         ) : (
           <div className="flex flex-col gap-2">
             {videos.map(v => {
-              const isSpotlight = spotlightId === v.id
-              const draft = draftAnalysis[v.id]
-              const live = publishedAnalysis[v.id]
-              const isEditing = editMode?.videoId === v.id
-
+              const isAmplified = amplifiedId === v.id
+              const genResult = generateStatus[v.id]
               return (
-                <div key={v.id} className={`flex flex-col bg-mesa-light/50 border rounded-xl overflow-hidden transition-colors ${
-                  isSpotlight ? 'border-desert-sky/25' : 'border-periwinkle/10 hover:border-periwinkle/20'
+                <div key={v.id} className={`flex flex-col bg-mesa-light/50 border rounded-xl px-4 py-3 transition-colors ${
+                  isAmplified ? 'border-sun/30 bg-sun/5' : 'border-periwinkle/10 hover:border-periwinkle/20'
                 }`}>
-                  {/* main row */}
-                  <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
+                  <div className="flex items-center gap-3">
                     <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${v.passed ? 'bg-desert-sky/70' : 'bg-red-rock/50'}`} />
                         <a href={v.youtubeUrl} target="_blank" rel="noopener noreferrer"
                           className="text-sm text-white/80 hover:text-desert-sky truncate transition-colors">{v.title}</a>
+                        {isAmplified && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-sun/20 border border-sun/40 text-sun shrink-0">amplified</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 pl-3.5">
                         <span className="text-xs text-sand/40">{v.channelName}</span>
@@ -911,144 +885,144 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
                         {v.manuallyAdded && <span className="text-xs text-desert-sky/40">manual</span>}
                       </div>
                     </div>
-
-                    <button onClick={() => handleRemove(v.id, v.title)}
-                      className="text-xs text-red-rock/30 hover:text-red-rock transition-colors shrink-0 px-2 py-1 rounded-lg hover:bg-red-rock/10">
-                      remove
-                    </button>
-
-                    {/* star toggle */}
-                    <button
-                      onClick={() => handleSetSpotlight(v.id)}
-                      title={isSpotlight ? 'spotlighted' : 'set as spotlight'}
-                      className={`text-sm shrink-0 px-2 py-1 rounded-lg border transition-colors ${
-                        isSpotlight
-                          ? 'text-desert-sky border-desert-sky/30 bg-desert-sky/10'
-                          : 'text-sand/30 border-transparent hover:text-sand/60 hover:border-periwinkle/20'
-                      }`}
-                    >
-                      {isSpotlight ? '★' : '☆'}
-                    </button>
-
-                    {/* spotlight action buttons — only when this video is spotlighted and not in edit mode */}
-                    {isSpotlight && !isEditing && (
-                      <>
-                        {/* no draft, no live → generate */}
-                        {!draft && !live && (
-                          <button
-                            onClick={() => handleGenerateAnalysis(v.id)}
-                            disabled={generating === v.id}
-                            className="text-xs px-2 py-1 rounded-lg border border-periwinkle/25 text-periwinkle-light/60 hover:border-periwinkle/50 transition-colors disabled:opacity-50 shrink-0"
-                          >
-                            {generating === v.id ? 'generating...' : 'generate analysis'}
-                          </button>
-                        )}
-
-                        {/* draft exists → edit draft + publish */}
-                        {draft && (
-                          <>
-                            <span className="text-xs text-periwinkle/40 shrink-0">draft · {draft.date}</span>
-                            <button
-                              onClick={() => handleStartEdit(v.id, 'draft')}
-                              className="text-xs px-2 py-1 rounded-lg border border-periwinkle/20 text-sand/40 hover:border-periwinkle/40 hover:text-sand/70 transition-colors shrink-0"
-                            >
-                              edit draft
-                            </button>
-                            <button
-                              onClick={() => handlePublish(v.id)}
-                              disabled={publishing}
-                              className="text-xs px-2 py-1 rounded-lg border border-desert-sky/35 bg-desert-sky/10 text-desert-sky hover:bg-desert-sky/20 transition-colors disabled:opacity-50 shrink-0"
-                            >
-                              {publishing ? 'publishing...' : 'publish →'}
-                            </button>
-                          </>
-                        )}
-
-                        {/* live exists → show status + edit live + regenerate */}
-                        {live && !draft && (
-                          <>
-                            <span className="text-xs text-desert-sky/50 shrink-0">live · {live.date}</span>
-                            <button
-                              onClick={() => handleStartEdit(v.id, 'live')}
-                              className="text-xs px-2 py-1 rounded-lg border border-periwinkle/20 text-sand/40 hover:border-periwinkle/40 hover:text-sand/70 transition-colors shrink-0"
-                            >
-                              edit
-                            </button>
-                            <button
-                              onClick={() => handleGenerateAnalysis(v.id)}
-                              disabled={generating === v.id}
-                              className="text-xs px-2 py-1 rounded-lg border border-periwinkle/15 text-sand/30 hover:border-periwinkle/35 hover:text-sand/60 transition-colors disabled:opacity-40 shrink-0"
-                            >
-                              {generating === v.id ? 'regenerating...' : 'regenerate'}
-                            </button>
-                          </>
-                        )}
-                      </>
-                    )}
-
-                    {spotlightError[v.id] && (
-                      <span className="text-xs text-red-rock/60 shrink-0">{spotlightError[v.id]}</span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {!isAmplified && (
+                        <button
+                          onClick={() => handleAmplify(v.id)}
+                          disabled={amplifyingId === v.id}
+                          className="text-xs text-sun/50 hover:text-sun transition-colors px-2 py-1 rounded-lg hover:bg-sun/10 disabled:opacity-40"
+                        >
+                          {amplifyingId === v.id ? 'setting...' : 'amplify'}
+                        </button>
+                      )}
+                      <button onClick={() => handleRemove(v.id, v.title)}
+                        className="text-xs text-red-rock/30 hover:text-red-rock transition-colors px-2 py-1 rounded-lg hover:bg-red-rock/10">
+                        remove
+                      </button>
+                    </div>
                   </div>
 
-                  {/* inline edit panel */}
-                  {isEditing && (
-                    <div className="border-t border-periwinkle/10 px-4 py-4 flex flex-col gap-4">
-                      <p className="text-xs text-sand/40 tracking-widest">
-                        editing {editMode.target === 'draft' ? 'draft' : 'live copy'}
-                        {editMode.target === 'live' && <span className="text-desert-sky/50 ml-2">changes go live immediately</span>}
-                      </p>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-sand/40 tracking-widest">label</label>
-                        <input
-                          value={editLabel}
-                          onChange={e => setEditLabel(e.target.value)}
-                          className={inputCls}
-                          placeholder="e.g. wildest claims"
-                        />
+                  {/* Amplified controls row */}
+                  {isAmplified && (
+                    <div className="mt-2 pt-2 border-t border-sun/15 pl-3.5 flex flex-col gap-3">
+                      {/* status + action buttons */}
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {genResult && typeof genResult === 'object' ? (
+                          <span className="text-xs text-sun/60">
+                            ready · {genResult.date} · {genResult.count} items · "{genResult.label}"
+                            {genResult.source === 'description' && <span className="text-sun/40"> · from description</span>}
+                          </span>
+                        ) : genResult === 'no_transcript' ? (
+                          <span className="text-xs text-red-rock/60">no transcript or description available — try a different video</span>
+                        ) : genResult === 'error' ? (
+                          <span className="text-xs text-red-rock/60">generation failed</span>
+                        ) : v.amplifiedAnalysis ? (
+                          <span className="text-xs text-sun/50">
+                            ready · {new Date((v.amplifiedAnalysis.generatedAt as { seconds: number }).seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {v.amplifiedAnalysis.items.length} items · "{v.amplifiedAnalysis.label}"
+                          </span>
+                        ) : null}
+
+                        <button
+                          onClick={() => handleGenerate(v.id)}
+                          disabled={generatingId === v.id}
+                          className="text-xs text-sun/60 hover:text-sun transition-colors px-2 py-1 rounded-lg hover:bg-sun/10 disabled:opacity-40"
+                        >
+                          {generatingId === v.id ? 'generating...' : (genResult || v.amplifiedAnalysis) ? 're-generate' : 'generate'}
+                        </button>
+                        <button
+                          onClick={() => setShowContextInput(s => !s)}
+                          className="text-xs text-periwinkle/40 hover:text-periwinkle-light transition-colors px-2 py-1 rounded-lg hover:bg-periwinkle/10"
+                          title="paste context for Claude to work from"
+                        >
+                          {showContextInput ? 'hide context' : 'add context'}
+                        </button>
+
+                        {/* edit button — only when analysis exists */}
+                        {(v.amplifiedAnalysis || (genResult && typeof genResult === 'object')) && !editingAnalysis && (
+                          <button
+                            onClick={() => {
+                              const src = genResult && typeof genResult === 'object'
+                                ? { label: genResult.label, items: genResult.items.length > 0 ? genResult.items : (v.amplifiedAnalysis?.items ?? []) }
+                                : { label: v.amplifiedAnalysis!.label, items: v.amplifiedAnalysis!.items }
+                              startEditAnalysis(src)
+                            }}
+                            className="text-xs text-periwinkle/50 hover:text-periwinkle-light transition-colors px-2 py-1 rounded-lg hover:bg-periwinkle/10"
+                          >
+                            edit
+                          </button>
+                        )}
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs text-sand/40 tracking-widest">claims</label>
-                        {editClaims.map((claim, i) => (
-                          <div key={i} className="flex gap-2 items-center">
-                            <span className="text-xs text-periwinkle/30 tabular-nums w-4 shrink-0 text-right">{i + 1}</span>
+
+                      {/* context paste field */}
+                      {showContextInput && !editingAnalysis && (
+                        <div className="flex flex-col gap-2">
+                          <label className="text-[10px] text-sand/40 tracking-widest">paste context for claude — description, transcript excerpt, or your own notes</label>
+                          <textarea
+                            value={contextText}
+                            onChange={e => setContextText(e.target.value)}
+                            placeholder="paste the video description, transcript, or any notes here..."
+                            rows={5}
+                            className="bg-mesa-light border border-periwinkle/20 rounded-lg px-3 py-2 text-sm text-white placeholder:text-sand/20 outline-none focus:border-periwinkle/50 transition-colors resize-none"
+                          />
+                          <p className="text-[10px] text-sand/30">this context will be used instead of the transcript on the next generate</p>
+                        </div>
+                      )}
+
+                      {/* inline edit form */}
+                      {editingAnalysis && (
+                        <div className="flex flex-col gap-3 bg-mesa/60 border border-sun/15 rounded-xl p-4">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] text-sand/40 tracking-widest">label</label>
                             <input
-                              value={claim}
-                              onChange={e => setEditClaims(prev => prev.map((c, j) => j === i ? e.target.value : c))}
-                              className={`flex-1 ${inputCls}`}
+                              type="text"
+                              value={editLabel}
+                              onChange={e => setEditLabel(e.target.value)}
+                              className="bg-mesa-light border border-periwinkle/20 rounded-lg px-3 py-2 text-sm text-white placeholder:text-sand/25 outline-none focus:border-periwinkle/50 transition-colors"
                             />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="text-[10px] text-sand/40 tracking-widest">items</label>
+                            {editItems.map((item, i) => (
+                              <div key={i} className="flex gap-2 items-start">
+                                <span className="text-xs text-periwinkle/30 tabular-nums pt-2.5 w-5 shrink-0">{i + 1}.</span>
+                                <textarea
+                                  value={item}
+                                  onChange={e => setEditItems(prev => prev.map((x, j) => j === i ? e.target.value : x))}
+                                  rows={2}
+                                  className="flex-1 bg-mesa-light border border-periwinkle/20 rounded-lg px-3 py-2 text-sm text-white placeholder:text-sand/25 outline-none focus:border-periwinkle/50 transition-colors resize-none"
+                                />
+                                <button
+                                  onClick={() => setEditItems(prev => prev.filter((_, j) => j !== i))}
+                                  className="text-xs text-red-rock/30 hover:text-red-rock transition-colors pt-2"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
                             <button
-                              type="button"
-                              onClick={() => setEditClaims(prev => prev.filter((_, j) => j !== i))}
-                              className="text-xs text-red-rock/30 hover:text-red-rock transition-colors shrink-0"
+                              onClick={() => setEditItems(prev => [...prev, ''])}
+                              className="text-xs text-periwinkle/40 hover:text-periwinkle-light transition-colors self-start mt-1"
                             >
-                              ✕
+                              + add item
                             </button>
                           </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => setEditClaims(prev => [...prev, ''])}
-                          className="text-xs text-sand/30 hover:text-sand/60 transition-colors self-start mt-1"
-                        >
-                          + add claim
-                        </button>
-                      </div>
-                      <div className="flex gap-3">
-                        <button
-                          onClick={handleSaveEdit}
-                          disabled={savingEdit || !editLabel.trim()}
-                          className="text-xs px-4 py-2 rounded-xl bg-periwinkle/20 border border-periwinkle/40 text-periwinkle-light hover:bg-periwinkle/30 transition-colors disabled:opacity-50"
-                        >
-                          {savingEdit ? 'saving...' : 'save'}
-                        </button>
-                        <button
-                          onClick={() => setEditMode(null)}
-                          className="text-xs text-sand/40 hover:text-sand/70 transition-colors"
-                        >
-                          cancel
-                        </button>
-                      </div>
+                          <div className="flex gap-3 pt-1">
+                            <button
+                              onClick={() => saveAnalysis(v.id)}
+                              disabled={savingAnalysis}
+                              className="text-xs bg-periwinkle/20 border border-periwinkle/40 text-periwinkle-light px-4 py-2 rounded-lg hover:bg-periwinkle/30 transition-colors disabled:opacity-40"
+                            >
+                              {savingAnalysis ? 'saving...' : 'save'}
+                            </button>
+                            <button
+                              onClick={() => setEditingAnalysis(false)}
+                              className="text-xs text-sand/40 hover:text-sand/70 transition-colors px-4 py-2"
+                            >
+                              cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

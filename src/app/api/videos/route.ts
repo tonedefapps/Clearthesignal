@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const db = getDb()
     const { searchParams } = new URL(req.url)
+    const amplified = searchParams.get('amplified') === 'true'
     const tag = searchParams.get('tag')
     const tagsParam = searchParams.get('tags')
     const tags = tagsParam ? tagsParam.split(',').filter(Boolean).slice(0, 10) : null
@@ -15,11 +16,11 @@ export async function GET(req: NextRequest) {
 
     const videosRef = collection(db, 'videos')
 
-    const spotlight = searchParams.get('spotlight')
-    if (spotlight === 'true') {
-      const q = query(videosRef, where('spotlight', '==', true), limit(1))
-      const snapshot = await getDocs(q)
-      return NextResponse.json(snapshot.docs.map(d => ({ id: d.id, ...d.data() })))
+    if (amplified) {
+      const snap = await getDocs(query(videosRef, where('amplified', '==', true), limit(1)))
+      if (snap.empty) return NextResponse.json(null)
+      const d = snap.docs[0]
+      return NextResponse.json({ id: d.id, ...d.data() })
     }
 
     const q = tags && tags.length > 0

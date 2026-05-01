@@ -1,8 +1,20 @@
 import {
   collection, query, where, orderBy, limit,
-  getDocs, deleteDoc, doc, getCountFromServer, updateDoc,
+  getDocs, deleteDoc, doc, getCountFromServer, updateDoc, writeBatch,
 } from 'firebase/firestore'
 import { getClientDb } from './client'
+
+export interface AmplifiedItem {
+  text: string
+  ts?: string
+}
+
+export interface AmplifiedAnalysis {
+  label: string
+  contentType: string
+  items: string[] | AmplifiedItem[]
+  generatedAt: { seconds: number }
+}
 
 export interface VideoSummary {
   id: string
@@ -25,17 +37,8 @@ export interface VideoSummary {
   }
   scoreRationale?: string
   scoredAt?: { seconds: number }
-  spotlight?: boolean
-  spotlightAnalysis?: {
-    label: string
-    claims: string[]
-    generatedAt: { seconds: number }
-  }
-  spotlightDraft?: {
-    label: string
-    claims: string[]
-    generatedAt: { seconds: number }
-  }
+  amplified?: boolean
+  amplifiedAnalysis?: AmplifiedAnalysis
 }
 
 export async function getRecentVideos(count = 30): Promise<VideoSummary[]> {
@@ -64,6 +67,44 @@ export async function removeVideo(videoId: string): Promise<void> {
   await deleteDoc(doc(db, 'videos', videoId))
 }
 
+export async function setAmplified(videoId: string): Promise<void> {
+  const db = getClientDb()
+  const existing = await getDocs(query(collection(db, 'videos'), where('amplified', '==', true)))
+  const batch = writeBatch(db)
+  existing.docs.forEach(d => batch.update(d.ref, { amplified: false }))
+  batch.update(doc(db, 'videos', videoId), { amplified: true })
+  await batch.commit()
+}
+
+export async function clearAmplified(): Promise<void> {
+  const db = getClientDb()
+  const existing = await getDocs(query(collection(db, 'videos'), where('amplified', '==', true)))
+  const batch = writeBatch(db)
+  existing.docs.forEach(d => batch.update(d.ref, { amplified: false }))
+  await batch.commit()
+}
+
+export async function getAmplifiedVideo(): Promise<VideoSummary | null> {
+  const db = getClientDb()
+  const snap = await getDocs(
+    query(collection(db, 'videos'), where('amplified', '==', true), limit(1))
+  )
+  if (snap.empty) return null
+  const d = snap.docs[0]
+  return { id: d.id, ...d.data() } as VideoSummary
+}
+
+export async function updateAmplifiedAnalysis(
+  videoId: string,
+  patch: { label: string; items: string[] }
+): Promise<void> {
+  const db = getClientDb()
+  await updateDoc(doc(db, 'videos', videoId), {
+    'amplifiedAnalysis.label': patch.label,
+    'amplifiedAnalysis.items': patch.items,
+  })
+}
+
 export async function getVideoStats(): Promise<{ passed: number; pending: number; total: number }> {
   const db = getClientDb()
   const [passedSnap, pendingSnap, totalSnap] = await Promise.all([
@@ -76,24 +117,4 @@ export async function getVideoStats(): Promise<{ passed: number; pending: number
     pending: pendingSnap.data().count,
     total: totalSnap.data().count,
   }
-}
-
-export async function setSpotlight(videoId: string): Promise<void> {
-  const db = getClientDb()
-  const existing = await getDocs(query(collection(db, 'videos'), where('spotlight', '==', true)))
-  await Promise.all(existing.docs.map(d => updateDoc(doc(db, 'videos', d.id), { spotlight: false })))
-  await updateDoc(doc(db, 'videos', videoId), { spotlight: true })
-}
-
-export async function clearSpotlight(): Promise<void> {
-  const db = getClientDb()
-  const existing = await getDocs(query(collection(db, 'videos'), where('spotlight', '==', true)))
-  await Promise.all(existing.docs.map(d => updateDoc(doc(db, 'videos', d.id), { spotlight: false })))
-}
-
-export async function getSpotlightVideo(): Promise<VideoSummary | null> {
-  const db = getClientDb()
-  const snap = await getDocs(query(collection(db, 'videos'), where('spotlight', '==', true), limit(1)))
-  if (snap.empty) return null
-  return { id: snap.docs[0].id, ...snap.docs[0].data() } as VideoSummary
 }

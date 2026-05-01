@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { google } from 'googleapis'
-
-const youtube = google.youtube({ version: 'v3', auth: process.env.YOUTUBE_API_KEY })
 
 function extractVideoId(url: string): string | null {
   try {
@@ -19,28 +16,32 @@ function extractVideoId(url: string): string | null {
 }
 
 export async function POST(req: NextRequest) {
-  const { url } = await req.json()
-  if (!url) return NextResponse.json({ error: 'url required' }, { status: 400 })
+  try {
+    const { url } = await req.json()
+    if (!url) return NextResponse.json({ error: 'url required' }, { status: 400 })
 
-  const videoId = extractVideoId(url)
-  if (!videoId) return NextResponse.json({ error: 'could not extract video ID from URL' }, { status: 400 })
+    const videoId = extractVideoId(url)
+    if (!videoId) return NextResponse.json({ error: 'could not extract video ID from URL' }, { status: 400 })
 
-  const response = await youtube.videos.list({
-    part: ['snippet'],
-    id: [videoId],
-  })
+    // oEmbed — no API key, no quota
+    const oembedRes = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+    )
+    if (!oembedRes.ok) return NextResponse.json({ error: 'video not found or unavailable' }, { status: 404 })
+    const oembed = await oembedRes.json()
 
-  const item = response.data.items?.[0]
-  if (!item) return NextResponse.json({ error: 'video not found' }, { status: 404 })
-
-  return NextResponse.json({
-    videoId,
-    title: item.snippet?.title || '',
-    description: item.snippet?.description || '',
-    channelName: item.snippet?.channelTitle || '',
-    channelId: item.snippet?.channelId || '',
-    publishedAt: item.snippet?.publishedAt || '',
-    thumbnailUrl: item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.default?.url || '',
-    youtubeUrl: `https://youtube.com/watch?v=${videoId}`,
-  })
+    return NextResponse.json({
+      videoId,
+      title: oembed.title || '',
+      description: '',
+      channelName: oembed.author_name || '',
+      channelId: '',
+      publishedAt: '',
+      thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      youtubeUrl: `https://youtube.com/watch?v=${videoId}`,
+    })
+  } catch (e) {
+    console.error('[add-video] error:', e)
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }

@@ -19,6 +19,8 @@ export const CANONICAL_TAGS = [
   'NDE',
   'Mandela effect',
   'awakening',
+  'psychic',
+  'remote viewing',
 ] as const
 
 export type CanonicalTag = typeof CANONICAL_TAGS[number]

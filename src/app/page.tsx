@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext'
 import Footer from '@/components/Footer'
 import SignalStrip from '@/components/SignalStrip'
 import SiteNav from '@/components/SiteNav'
-import SpotlightSection from '@/components/SpotlightSection'
+import AmplifiedSection from '@/components/AmplifiedSection'
 
 interface Video {
   id: string
@@ -115,7 +115,7 @@ export default function HomePage() {
 
       <SignalStrip />
 
-      <SpotlightSection />
+      <AmplifiedSection />
 
       {/* feed */}
       <section id="feed" className="pb-24">
