@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(seed)
     }
 
-    return NextResponse.json(videos)
+    return NextResponse.json(videos.filter((v: Record<string, unknown>) => !v.amplified))
   } catch (error) {
     console.error('Videos API error:', error)
     return NextResponse.json({ error: 'Failed to fetch videos' }, { status: 500 })
