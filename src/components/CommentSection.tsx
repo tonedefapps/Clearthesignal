@@ -15,13 +15,14 @@ function formatDate(ts: { seconds: number } | null) {
 interface ReplyProps {
   reply: Comment
   postId: string
+  parentCollection: string
   isAdmin: boolean
   onRefresh: () => void
 }
 
-function Reply({ reply, postId, isAdmin, onRefresh }: ReplyProps) {
+function Reply({ reply, postId, parentCollection, isAdmin, onRefresh }: ReplyProps) {
   async function handleDelete() {
-    await softDeleteComment(postId, reply.id)
+    await softDeleteComment(postId, reply.id, parentCollection)
     onRefresh()
   }
 
@@ -53,19 +54,20 @@ function Reply({ reply, postId, isAdmin, onRefresh }: ReplyProps) {
 interface CommentItemProps {
   comment: Comment
   postId: string
+  parentCollection: string
   isAdmin: boolean
   replies: Comment[]
   onRefresh: () => void
 }
 
-function CommentItem({ comment, postId, isAdmin, replies, onRefresh }: CommentItemProps) {
+function CommentItem({ comment, postId, parentCollection, isAdmin, replies, onRefresh }: CommentItemProps) {
   const { user, profile } = useAuth()
   const [replyOpen, setReplyOpen] = useState(false)
   const [replyBody, setReplyBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   async function handleDelete() {
-    await softDeleteComment(postId, comment.id)
+    await softDeleteComment(postId, comment.id, parentCollection)
     onRefresh()
   }
 
@@ -79,7 +81,7 @@ function CommentItem({ comment, postId, isAdmin, replies, onRefresh }: CommentIt
         displayName: profile.displayName || user.email || 'anonymous',
         body: replyBody.trim(),
         parentId: comment.id,
-      })
+      }, parentCollection)
       setReplyBody('')
       setReplyOpen(false)
       onRefresh()
@@ -132,6 +134,7 @@ function CommentItem({ comment, postId, isAdmin, replies, onRefresh }: CommentIt
               key={reply.id}
               reply={reply}
               postId={postId}
+              parentCollection={parentCollection}
               isAdmin={isAdmin}
               onRefresh={onRefresh}
             />
@@ -171,7 +174,7 @@ function CommentItem({ comment, postId, isAdmin, replies, onRefresh }: CommentIt
   )
 }
 
-export default function CommentSection({ postId }: { postId: string }) {
+export default function CommentSection({ postId, parentCollection = 'signal_posts' }: { postId: string; parentCollection?: string }) {
   const { user, profile, loading } = useAuth()
   const [comments, setComments] = useState<Comment[]>([])
   const [loadingComments, setLoadingComments] = useState(true)
@@ -181,10 +184,10 @@ export default function CommentSection({ postId }: { postId: string }) {
   const isAdmin = profile?.role === 'admin' || profile?.role === 'mod'
 
   const loadComments = useCallback(async () => {
-    const data = await getComments(postId)
+    const data = await getComments(postId, parentCollection)
     setComments(data)
     setLoadingComments(false)
-  }, [postId])
+  }, [postId, parentCollection])
 
   useEffect(() => { loadComments() }, [loadComments])
 
@@ -198,7 +201,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         displayName: profile.displayName || user.email || 'anonymous',
         body: body.trim(),
         parentId: null,
-      })
+      }, parentCollection)
       setBody('')
       await loadComments()
     } finally {
@@ -276,6 +279,7 @@ export default function CommentSection({ postId }: { postId: string }) {
               key={comment.id}
               comment={comment}
               postId={postId}
+              parentCollection={parentCollection}
               isAdmin={isAdmin}
               replies={repliesByParent[comment.id] || []}
               onRefresh={loadComments}

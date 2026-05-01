@@ -15,6 +15,13 @@ export async function GET(req: NextRequest) {
 
     const videosRef = collection(db, 'videos')
 
+    const spotlight = searchParams.get('spotlight')
+    if (spotlight === 'true') {
+      const q = query(videosRef, where('spotlight', '==', true), limit(1))
+      const snapshot = await getDocs(q)
+      return NextResponse.json(snapshot.docs.map(d => ({ id: d.id, ...d.data() })))
+    }
+
     const q = tags && tags.length > 0
       ? query(videosRef, where('passed', '==', true), where('tags', 'array-contains-any', tags), orderBy('scoredAt', 'desc'), limit(limitCount))
       : tag

@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { createSignalPost, deleteSignalPost, getSignalPosts, type SignalPost } from '@/lib/firebase/signal'
-import { getRecentVideos, removeVideo, getVideoStats, approveVideo, rejectVideo, type VideoSummary } from '@/lib/firebase/videos'
+import { getRecentVideos, removeVideo, getVideoStats, approveVideo, rejectVideo, setSpotlight, type VideoSummary } from '@/lib/firebase/videos'
 import { getUserByEmail, setUserRole, getTeamMembers, type UserProfile } from '@/lib/firebase/users'
 import { getChannels, setChannelTier, type ChannelRecord, type ChannelTier } from '@/lib/firebase/channels'
 import { CANONICAL_TAGS } from '@/lib/constants/tags'
-import { getDb, doc, getDoc, setDoc, serverTimestamp } from '@/lib/firebase/server'
+import { getDb, doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from '@/lib/firebase/server'
 import SiteNav from '@/components/SiteNav'
 
 type Tab = 'overview' | 'pipeline' | 'channels' | 'dispatch' | 'feed' | 'team'
@@ -663,10 +663,125 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
   const [videoSuccess, setVideoSuccess] = useState('')
   const [videos, setVideos] = useState<VideoSummary[]>([])
   const [videosLoading, setVideosLoading] = useState(true)
+  const [spotlightId, setSpotlightId] = useState<string | null>(null)
+  const [generating, setGenerating] = useState<string | null>(null)
+  const [publishing, setPublishing] = useState(false)
+  // draft = staged, not yet live; published = live on homepage
+  const [draftAnalysis, setDraftAnalysis] = useState<Record<string, { label: string; claims: string[]; date: string }>>({})
+  const [publishedAnalysis, setPublishedAnalysis] = useState<Record<string, { label: string; claims: string[]; date: string }>>({})
+  const [spotlightError, setSpotlightError] = useState<Record<string, string>>({})
+  const [editMode, setEditMode] = useState<{ videoId: string; target: 'draft' | 'live' } | null>(null)
+  const [editLabel, setEditLabel] = useState('')
+  const [editClaims, setEditClaims] = useState<string[]>([])
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  function fmtDate(ts?: { seconds: number }) {
+    if (!ts) return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return new Date(ts.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
 
   useEffect(() => {
-    getRecentVideos(30).then(setVideos).catch(() => {}).finally(() => setVideosLoading(false))
+    getRecentVideos(30).then(vs => {
+      setVideos(vs)
+      setSpotlightId(vs.find(v => v.spotlight)?.id ?? null)
+      const drafts: Record<string, { label: string; claims: string[]; date: string }> = {}
+      const published: Record<string, { label: string; claims: string[]; date: string }> = {}
+      vs.forEach(v => {
+        if (v.spotlightDraft)
+          drafts[v.id] = { label: v.spotlightDraft.label, claims: v.spotlightDraft.claims, date: fmtDate(v.spotlightDraft.generatedAt) }
+        if (v.spotlightAnalysis)
+          published[v.id] = { label: v.spotlightAnalysis.label, claims: v.spotlightAnalysis.claims, date: fmtDate(v.spotlightAnalysis.generatedAt) }
+      })
+      setDraftAnalysis(drafts)
+      setPublishedAnalysis(published)
+    }).catch(() => {}).finally(() => setVideosLoading(false))
   }, [])
+
+  async function handleSetSpotlight(videoId: string) {
+    await setSpotlight(videoId)
+    setSpotlightId(videoId)
+    setVideos(prev => prev.map(v => ({ ...v, spotlight: v.id === videoId })))
+  }
+
+  async function handleGenerateAnalysis(videoId: string) {
+    if (!user) return
+    setGenerating(videoId)
+    setSpotlightError(prev => ({ ...prev, [videoId]: '' }))
+    try {
+      const token = await user.getIdToken()
+      const res = await fetch('/api/admin/generate-spotlight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ videoId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setSpotlightError(prev => ({
+          ...prev,
+          [videoId]: data.error === 'no_transcript' ? 'no transcript available' : 'generation failed',
+        }))
+      } else {
+        await updateDoc(doc(getDb(), 'videos', videoId), {
+          spotlightDraft: { label: data.label, claims: data.claims, generatedAt: serverTimestamp() },
+        })
+        const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        setDraftAnalysis(prev => ({ ...prev, [videoId]: { label: data.label, claims: data.claims, date } }))
+      }
+    } catch {
+      setSpotlightError(prev => ({ ...prev, [videoId]: 'generation failed' }))
+    } finally {
+      setGenerating(null)
+    }
+  }
+
+  async function handlePublish(videoId: string) {
+    const draft = draftAnalysis[videoId]
+    if (!draft) return
+    setPublishing(true)
+    try {
+      await updateDoc(doc(getDb(), 'videos', videoId), {
+        spotlightAnalysis: { label: draft.label, claims: draft.claims, generatedAt: serverTimestamp() },
+        spotlightDraft: deleteField(),
+      })
+      setPublishedAnalysis(prev => ({ ...prev, [videoId]: { ...draft, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) } }))
+      setDraftAnalysis(prev => { const next = { ...prev }; delete next[videoId]; return next })
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  function handleStartEdit(videoId: string, target: 'draft' | 'live') {
+    const source = target === 'draft' ? draftAnalysis[videoId] : publishedAnalysis[videoId]
+    if (!source) return
+    setEditLabel(source.label)
+    setEditClaims(source.claims)
+    setEditMode({ videoId, target })
+  }
+
+  async function handleSaveEdit() {
+    if (!editMode) return
+    const { videoId, target } = editMode
+    const cleanedClaims = editClaims.map(c => c.trim()).filter(Boolean)
+    setSavingEdit(true)
+    try {
+      if (target === 'draft') {
+        await updateDoc(doc(getDb(), 'videos', videoId), {
+          'spotlightDraft.label': editLabel.trim(),
+          'spotlightDraft.claims': cleanedClaims,
+        })
+        setDraftAnalysis(prev => ({ ...prev, [videoId]: { ...prev[videoId], label: editLabel.trim(), claims: cleanedClaims } }))
+      } else {
+        await updateDoc(doc(getDb(), 'videos', videoId), {
+          'spotlightAnalysis.label': editLabel.trim(),
+          'spotlightAnalysis.claims': cleanedClaims,
+        })
+        setPublishedAnalysis(prev => ({ ...prev, [videoId]: { ...prev[videoId], label: editLabel.trim(), claims: cleanedClaims } }))
+      }
+      setEditMode(null)
+    } finally {
+      setSavingEdit(false)
+    }
+  }
 
   async function handleFetchVideo(e: React.FormEvent) {
     e.preventDefault()
@@ -772,26 +887,173 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
           <p className="text-sand/30 text-sm">no videos scored yet.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {videos.map(v => (
-              <div key={v.id} className="flex items-center gap-3 bg-mesa-light/50 border border-periwinkle/10 rounded-xl px-4 py-3 hover:border-periwinkle/20 transition-colors">
-                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${v.passed ? 'bg-desert-sky/70' : 'bg-red-rock/50'}`} />
-                    <a href={v.youtubeUrl} target="_blank" rel="noopener noreferrer"
-                      className="text-sm text-white/80 hover:text-desert-sky truncate transition-colors">{v.title}</a>
+            {videos.map(v => {
+              const isSpotlight = spotlightId === v.id
+              const draft = draftAnalysis[v.id]
+              const live = publishedAnalysis[v.id]
+              const isEditing = editMode?.videoId === v.id
+
+              return (
+                <div key={v.id} className={`flex flex-col bg-mesa-light/50 border rounded-xl overflow-hidden transition-colors ${
+                  isSpotlight ? 'border-desert-sky/25' : 'border-periwinkle/10 hover:border-periwinkle/20'
+                }`}>
+                  {/* main row */}
+                  <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
+                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${v.passed ? 'bg-desert-sky/70' : 'bg-red-rock/50'}`} />
+                        <a href={v.youtubeUrl} target="_blank" rel="noopener noreferrer"
+                          className="text-sm text-white/80 hover:text-desert-sky truncate transition-colors">{v.title}</a>
+                      </div>
+                      <div className="flex items-center gap-3 pl-3.5">
+                        <span className="text-xs text-sand/40">{v.channelName}</span>
+                        <span className="text-xs text-periwinkle/50">{v.scores?.overall.toFixed(1)}</span>
+                        {v.manuallyAdded && <span className="text-xs text-desert-sky/40">manual</span>}
+                      </div>
+                    </div>
+
+                    <button onClick={() => handleRemove(v.id, v.title)}
+                      className="text-xs text-red-rock/30 hover:text-red-rock transition-colors shrink-0 px-2 py-1 rounded-lg hover:bg-red-rock/10">
+                      remove
+                    </button>
+
+                    {/* star toggle */}
+                    <button
+                      onClick={() => handleSetSpotlight(v.id)}
+                      title={isSpotlight ? 'spotlighted' : 'set as spotlight'}
+                      className={`text-sm shrink-0 px-2 py-1 rounded-lg border transition-colors ${
+                        isSpotlight
+                          ? 'text-desert-sky border-desert-sky/30 bg-desert-sky/10'
+                          : 'text-sand/30 border-transparent hover:text-sand/60 hover:border-periwinkle/20'
+                      }`}
+                    >
+                      {isSpotlight ? '★' : '☆'}
+                    </button>
+
+                    {/* spotlight action buttons — only when this video is spotlighted and not in edit mode */}
+                    {isSpotlight && !isEditing && (
+                      <>
+                        {/* no draft, no live → generate */}
+                        {!draft && !live && (
+                          <button
+                            onClick={() => handleGenerateAnalysis(v.id)}
+                            disabled={generating === v.id}
+                            className="text-xs px-2 py-1 rounded-lg border border-periwinkle/25 text-periwinkle-light/60 hover:border-periwinkle/50 transition-colors disabled:opacity-50 shrink-0"
+                          >
+                            {generating === v.id ? 'generating...' : 'generate analysis'}
+                          </button>
+                        )}
+
+                        {/* draft exists → edit draft + publish */}
+                        {draft && (
+                          <>
+                            <span className="text-xs text-periwinkle/40 shrink-0">draft · {draft.date}</span>
+                            <button
+                              onClick={() => handleStartEdit(v.id, 'draft')}
+                              className="text-xs px-2 py-1 rounded-lg border border-periwinkle/20 text-sand/40 hover:border-periwinkle/40 hover:text-sand/70 transition-colors shrink-0"
+                            >
+                              edit draft
+                            </button>
+                            <button
+                              onClick={() => handlePublish(v.id)}
+                              disabled={publishing}
+                              className="text-xs px-2 py-1 rounded-lg border border-desert-sky/35 bg-desert-sky/10 text-desert-sky hover:bg-desert-sky/20 transition-colors disabled:opacity-50 shrink-0"
+                            >
+                              {publishing ? 'publishing...' : 'publish →'}
+                            </button>
+                          </>
+                        )}
+
+                        {/* live exists → show status + edit live + regenerate */}
+                        {live && !draft && (
+                          <>
+                            <span className="text-xs text-desert-sky/50 shrink-0">live · {live.date}</span>
+                            <button
+                              onClick={() => handleStartEdit(v.id, 'live')}
+                              className="text-xs px-2 py-1 rounded-lg border border-periwinkle/20 text-sand/40 hover:border-periwinkle/40 hover:text-sand/70 transition-colors shrink-0"
+                            >
+                              edit
+                            </button>
+                            <button
+                              onClick={() => handleGenerateAnalysis(v.id)}
+                              disabled={generating === v.id}
+                              className="text-xs px-2 py-1 rounded-lg border border-periwinkle/15 text-sand/30 hover:border-periwinkle/35 hover:text-sand/60 transition-colors disabled:opacity-40 shrink-0"
+                            >
+                              {generating === v.id ? 'regenerating...' : 'regenerate'}
+                            </button>
+                          </>
+                        )}
+                      </>
+                    )}
+
+                    {spotlightError[v.id] && (
+                      <span className="text-xs text-red-rock/60 shrink-0">{spotlightError[v.id]}</span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3 pl-3.5">
-                    <span className="text-xs text-sand/40">{v.channelName}</span>
-                    <span className="text-xs text-periwinkle/50">{v.scores?.overall.toFixed(1)}</span>
-                    {v.manuallyAdded && <span className="text-xs text-desert-sky/40">manual</span>}
-                  </div>
+
+                  {/* inline edit panel */}
+                  {isEditing && (
+                    <div className="border-t border-periwinkle/10 px-4 py-4 flex flex-col gap-4">
+                      <p className="text-xs text-sand/40 tracking-widest">
+                        editing {editMode.target === 'draft' ? 'draft' : 'live copy'}
+                        {editMode.target === 'live' && <span className="text-desert-sky/50 ml-2">changes go live immediately</span>}
+                      </p>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs text-sand/40 tracking-widest">label</label>
+                        <input
+                          value={editLabel}
+                          onChange={e => setEditLabel(e.target.value)}
+                          className={inputCls}
+                          placeholder="e.g. wildest claims"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs text-sand/40 tracking-widest">claims</label>
+                        {editClaims.map((claim, i) => (
+                          <div key={i} className="flex gap-2 items-center">
+                            <span className="text-xs text-periwinkle/30 tabular-nums w-4 shrink-0 text-right">{i + 1}</span>
+                            <input
+                              value={claim}
+                              onChange={e => setEditClaims(prev => prev.map((c, j) => j === i ? e.target.value : c))}
+                              className={`flex-1 ${inputCls}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setEditClaims(prev => prev.filter((_, j) => j !== i))}
+                              className="text-xs text-red-rock/30 hover:text-red-rock transition-colors shrink-0"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setEditClaims(prev => [...prev, ''])}
+                          className="text-xs text-sand/30 hover:text-sand/60 transition-colors self-start mt-1"
+                        >
+                          + add claim
+                        </button>
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleSaveEdit}
+                          disabled={savingEdit || !editLabel.trim()}
+                          className="text-xs px-4 py-2 rounded-xl bg-periwinkle/20 border border-periwinkle/40 text-periwinkle-light hover:bg-periwinkle/30 transition-colors disabled:opacity-50"
+                        >
+                          {savingEdit ? 'saving...' : 'save'}
+                        </button>
+                        <button
+                          onClick={() => setEditMode(null)}
+                          className="text-xs text-sand/40 hover:text-sand/70 transition-colors"
+                        >
+                          cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <button onClick={() => handleRemove(v.id, v.title)}
-                  className="text-xs text-red-rock/30 hover:text-red-rock transition-colors shrink-0 px-2 py-1 rounded-lg hover:bg-red-rock/10">
-                  remove
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </section>

@@ -25,6 +25,17 @@ export interface VideoSummary {
   }
   scoreRationale?: string
   scoredAt?: { seconds: number }
+  spotlight?: boolean
+  spotlightAnalysis?: {
+    label: string
+    claims: string[]
+    generatedAt: { seconds: number }
+  }
+  spotlightDraft?: {
+    label: string
+    claims: string[]
+    generatedAt: { seconds: number }
+  }
 }
 
 export async function getRecentVideos(count = 30): Promise<VideoSummary[]> {
@@ -65,4 +76,24 @@ export async function getVideoStats(): Promise<{ passed: number; pending: number
     pending: pendingSnap.data().count,
     total: totalSnap.data().count,
   }
+}
+
+export async function setSpotlight(videoId: string): Promise<void> {
+  const db = getClientDb()
+  const existing = await getDocs(query(collection(db, 'videos'), where('spotlight', '==', true)))
+  await Promise.all(existing.docs.map(d => updateDoc(doc(db, 'videos', d.id), { spotlight: false })))
+  await updateDoc(doc(db, 'videos', videoId), { spotlight: true })
+}
+
+export async function clearSpotlight(): Promise<void> {
+  const db = getClientDb()
+  const existing = await getDocs(query(collection(db, 'videos'), where('spotlight', '==', true)))
+  await Promise.all(existing.docs.map(d => updateDoc(doc(db, 'videos', d.id), { spotlight: false })))
+}
+
+export async function getSpotlightVideo(): Promise<VideoSummary | null> {
+  const db = getClientDb()
+  const snap = await getDocs(query(collection(db, 'videos'), where('spotlight', '==', true), limit(1)))
+  if (snap.empty) return null
+  return { id: snap.docs[0].id, ...snap.docs[0].data() } as VideoSummary
 }

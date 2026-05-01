@@ -3,6 +3,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getDb, doc, getDoc, updateDoc, increment } from '@/lib/firebase/server'
 import { SpiralIcon } from '@/components/SpiralIcon'
+import CommentSection from '@/components/CommentSection'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,7 @@ interface VideoData {
   scoreRationale?: string
   tags: string[]
   passed: boolean
+  spotlight?: boolean
 }
 
 async function fetchVideo(videoId: string): Promise<VideoData | null> {
@@ -137,6 +139,14 @@ export default async function VideoPage({ params }: Props) {
           )}
 
         </div>
+
+        {video.spotlight && (
+          <>
+            <div className="border-t border-periwinkle/15 mt-4" />
+            <CommentSection postId={videoId} parentCollection="videos" />
+          </>
+        )}
+
       </div>
     </main>
   )

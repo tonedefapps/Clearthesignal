@@ -14,10 +14,10 @@ export interface Comment {
   deleted: boolean
 }
 
-export async function getComments(postId: string): Promise<Comment[]> {
+export async function getComments(postId: string, parentCollection = 'signal_posts'): Promise<Comment[]> {
   const db = getClientDb()
   const q = query(
-    collection(db, 'signal_posts', postId, 'comments'),
+    collection(db, parentCollection, postId, 'comments'),
     orderBy('createdAt', 'asc'),
   )
   const snap = await getDocs(q)
@@ -27,19 +27,20 @@ export async function getComments(postId: string): Promise<Comment[]> {
 export async function addComment(
   postId: string,
   data: { uid: string; displayName: string; body: string; parentId: string | null },
+  parentCollection = 'signal_posts',
 ): Promise<string> {
   const db = getClientDb()
-  const ref = await addDoc(collection(db, 'signal_posts', postId, 'comments'), {
+  const ref = await addDoc(collection(db, parentCollection, postId, 'comments'), {
     ...data,
     createdAt: serverTimestamp(),
     deleted: false,
   })
-  await updateDoc(doc(db, 'signal_posts', postId), { commentCount: increment(1) })
+  await updateDoc(doc(db, parentCollection, postId), { commentCount: increment(1) })
   return ref.id
 }
 
-export async function softDeleteComment(postId: string, commentId: string): Promise<void> {
+export async function softDeleteComment(postId: string, commentId: string, parentCollection = 'signal_posts'): Promise<void> {
   const db = getClientDb()
-  await updateDoc(doc(db, 'signal_posts', postId, 'comments', commentId), { deleted: true })
-  await updateDoc(doc(db, 'signal_posts', postId), { commentCount: increment(-1) })
+  await updateDoc(doc(db, parentCollection, postId, 'comments', commentId), { deleted: true })
+  await updateDoc(doc(db, parentCollection, postId), { commentCount: increment(-1) })
 }
