@@ -22,6 +22,7 @@ export interface SignalPost {
   publishedAt: unknown
   authorUid: string
   authorName: string
+  commentCount?: number
 }
 
 export async function getSignalPosts(tag?: string, limitCount = 20): Promise<SignalPost[]> {

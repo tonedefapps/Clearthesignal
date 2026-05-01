@@ -1,5 +1,5 @@
 import {
-  collection, doc, addDoc, updateDoc,
+  collection, doc, addDoc, updateDoc, increment,
   getDocs, query, orderBy, serverTimestamp,
 } from 'firebase/firestore'
 import { getClientDb } from './client'
@@ -34,10 +34,12 @@ export async function addComment(
     createdAt: serverTimestamp(),
     deleted: false,
   })
+  await updateDoc(doc(db, 'signal_posts', postId), { commentCount: increment(1) })
   return ref.id
 }
 
 export async function softDeleteComment(postId: string, commentId: string): Promise<void> {
   const db = getClientDb()
   await updateDoc(doc(db, 'signal_posts', postId, 'comments', commentId), { deleted: true })
+  await updateDoc(doc(db, 'signal_posts', postId), { commentCount: increment(-1) })
 }

@@ -57,7 +57,9 @@ export default function SignalCard({ post, onDelete }: SignalCardProps) {
             href={`/signal/${post.id}`}
             className="text-xs text-sand/35 hover:text-sand/60 transition-colors"
           >
-            discuss
+            {post.commentCount && post.commentCount > 0
+              ? `${post.commentCount} comment${post.commentCount === 1 ? '' : 's'}`
+              : 'discuss'}
           </Link>
           {onDelete && (
             <button
