@@ -941,9 +941,12 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
                           {generatingId === v.id ? 'generating...' : (genResult || v.amplifiedAnalysis) ? 're-generate' : 'generate'}
                         </button>
                         <button
-                          onClick={() => setShowContextInput(s => !s)}
+                          onClick={() => {
+                            const opening = !showContextInput
+                            setShowContextInput(opening)
+                            if (opening) window.open(`https://www.youtube.com/watch?v=${v.id}`, '_blank')
+                          }}
                           className="text-xs text-periwinkle/40 hover:text-periwinkle-light transition-colors px-2 py-1 rounded-lg hover:bg-periwinkle/10"
-                          title="paste context for Claude to work from"
                         >
                           {showContextInput ? 'hide context' : 'add context'}
                         </button>
