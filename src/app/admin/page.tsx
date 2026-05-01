@@ -967,15 +967,26 @@ function FeedTab({ user, profile }: { user: any; profile: any }) {
                       {/* context paste field */}
                       {showContextInput && !editingAnalysis && (
                         <div className="flex flex-col gap-2">
-                          <label className="text-[10px] text-sand/40 tracking-widest">paste context for claude — description, transcript excerpt, or your own notes</label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] text-sand/40 tracking-widest">paste transcript or notes for claude</label>
+                            <a
+                              href={`https://youtube.com/watch?v=${v.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] text-periwinkle/50 hover:text-periwinkle-light transition-colors"
+                              title="Open video on YouTube — click ··· → Show transcript, then copy all"
+                            >
+                              open transcript on youtube ↗
+                            </a>
+                          </div>
                           <textarea
                             value={contextText}
                             onChange={e => setContextText(e.target.value)}
-                            placeholder="paste the video description, transcript, or any notes here..."
+                            placeholder="paste the video transcript here (include timestamps for best results)..."
                             rows={5}
                             className="bg-mesa-light border border-periwinkle/20 rounded-lg px-3 py-2 text-sm text-white placeholder:text-sand/20 outline-none focus:border-periwinkle/50 transition-colors resize-none"
                           />
-                          <p className="text-[10px] text-sand/30">this context will be used instead of the transcript on the next generate</p>
+                          <p className="text-[10px] text-sand/30">on youtube: click ··· → show transcript → toggle timestamps on → copy all</p>
                         </div>
                       )}
 
