@@ -207,8 +207,13 @@ export default function SocialTab() {
 
       const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
       const target = new ArrayBufferTarget()
+      const AUDIO_SAMPLE_RATE = 44100
+      const AUDIO_CHANNELS = 2
       const muxer = new Muxer({
-        target, video: { codec: 'avc', width: SLIDE_W, height: SLIDE_H, frameRate: FPS }, fastStart: 'in-memory',
+        target,
+        video: { codec: 'avc', width: SLIDE_W, height: SLIDE_H, frameRate: FPS },
+        audio: { codec: 'aac', sampleRate: AUDIO_SAMPLE_RATE, numberOfChannels: AUDIO_CHANNELS },
+        fastStart: 'in-memory',
       })
 
       const offscreen = new OffscreenCanvas(SLIDE_W, SLIDE_H)
@@ -218,8 +223,13 @@ export default function SocialTab() {
         output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
         error: (e) => { encoderError = e },
       })
-      // avc1.640028 = H.264 High Profile Level 4.0, supports up to 2073600 luma samples (covers 1080x1920)
       encoder.configure({ codec: 'avc1.640028', width: SLIDE_W, height: SLIDE_H, bitrate: 4_000_000, framerate: FPS })
+
+      const audioEncoder = new AudioEncoder({
+        output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+        error: (e) => { encoderError = e },
+      })
+      audioEncoder.configure({ codec: 'mp4a.40.2', sampleRate: AUDIO_SAMPLE_RATE, numberOfChannels: AUDIO_CHANNELS, bitrate: 128_000 })
 
       let frameIndex = 0, currentUs = 0
       for (let s = 0; s < slides.length; s++) {
@@ -238,8 +248,28 @@ export default function SocialTab() {
         }
       }
 
+      // Encode silent audio track for full video duration
+      const totalSamples = Math.ceil(AUDIO_SAMPLE_RATE * (currentUs / 1_000_000))
+      const CHUNK = 1024
+      const silence = new Float32Array(CHUNK * AUDIO_CHANNELS)
+      for (let offset = 0; offset < totalSamples; offset += CHUNK) {
+        const frames = Math.min(CHUNK, totalSamples - offset)
+        const audioData = new AudioData({
+          format: 'f32-planar',
+          sampleRate: AUDIO_SAMPLE_RATE,
+          numberOfFrames: frames,
+          numberOfChannels: AUDIO_CHANNELS,
+          timestamp: Math.round((offset / AUDIO_SAMPLE_RATE) * 1_000_000),
+          data: silence.slice(0, frames * AUDIO_CHANNELS),
+        })
+        audioEncoder.encode(audioData)
+        audioData.close()
+      }
+
       setRenderProgress('finalizing...')
-      await encoder.flush(); encoder.close(); muxer.finalize()
+      await encoder.flush(); encoder.close()
+      await audioEncoder.flush(); audioEncoder.close()
+      muxer.finalize()
       setVideoBlob(new Blob([target.buffer], { type: 'video/mp4' }))
       setRenderProgress('')
     } catch (e) {
