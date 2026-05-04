@@ -34,19 +34,20 @@ function getIgCredentials(): { accessToken: string; userId: string } | null {
   return { accessToken, userId }
 }
 
-async function pollContainer(containerId: string, accessToken: string): Promise<boolean> {
+async function pollContainer(containerId: string, accessToken: string): Promise<string | null> {
   const deadline = Date.now() + 110_000
   while (Date.now() < deadline) {
     await new Promise(r => setTimeout(r, 5000))
     const res = await fetch(
-      `https://graph.instagram.com/v21.0/${containerId}?fields=status_code&access_token=${accessToken}`
+      `https://graph.instagram.com/v21.0/${containerId}?fields=status_code,status&access_token=${accessToken}`
     )
     if (!res.ok) continue
     const data = await res.json()
-    if (data.status_code === 'FINISHED') return true
-    if (data.status_code === 'ERROR') return false
+    console.log('[post-reel] container status:', JSON.stringify(data))
+    if (data.status_code === 'FINISHED') return null
+    if (data.status_code === 'ERROR') return data.status ?? 'container error (no detail)'
   }
-  return false
+  return 'timed out'
 }
 
 export async function POST(req: NextRequest) {
@@ -97,8 +98,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Poll until ready
-    const ready = await pollContainer(containerData.id, ig.accessToken)
-    if (!ready) throw new Error('container processing timed out or errored')
+    const pollError = await pollContainer(containerData.id, ig.accessToken)
+    if (pollError) throw new Error(`container failed: ${pollError}`)
 
     // Publish
     const publishRes = await fetch(
