@@ -207,7 +207,7 @@ export default function SocialTab() {
 
       const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
       const target = new ArrayBufferTarget()
-      const AUDIO_SAMPLE_RATE = 44100
+      const AUDIO_SAMPLE_RATE = 48000
       const AUDIO_CHANNELS = 2
       const muxer = new Muxer({
         target,
@@ -389,6 +389,14 @@ export default function SocialTab() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Download (debug) */}
+      {videoBlob && (
+        <a href={URL.createObjectURL(videoBlob)} download="reel.mp4"
+          className="text-xs text-sand/40 hover:text-sand/70 underline self-start">
+          download reel for inspection
+        </a>
       )}
 
       {/* Post */}

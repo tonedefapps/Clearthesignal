@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
           media_type: 'REELS',
           video_url: videoUrl,
           caption: body.caption ?? '',
+          share_to_feed: true,
           access_token: ig.accessToken,
         }),
       }
