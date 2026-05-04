@@ -125,8 +125,9 @@ export async function POST(req: NextRequest) {
       postId: publishData.id,
       permalink: permalinkData.permalink ?? null,
     })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   } finally {
-    // Always clean up blob
     await del(videoUrl).catch(() => {})
   }
 }
