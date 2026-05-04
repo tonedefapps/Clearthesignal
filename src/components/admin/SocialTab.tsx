@@ -212,11 +212,13 @@ export default function SocialTab() {
 
       const offscreen = new OffscreenCanvas(SLIDE_W, SLIDE_H)
       const octx = offscreen.getContext('2d')!
+      let encoderError: Error | null = null
       const encoder = new VideoEncoder({
         output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-        error: (e) => { throw e },
+        error: (e) => { encoderError = e },
       })
-      encoder.configure({ codec: 'avc1.42001f', width: SLIDE_W, height: SLIDE_H, bitrate: 4_000_000, framerate: FPS })
+      // avc1.640028 = H.264 High Profile Level 4.0, supports up to 2073600 luma samples (covers 1080x1920)
+      encoder.configure({ codec: 'avc1.640028', width: SLIDE_W, height: SLIDE_H, bitrate: 4_000_000, framerate: FPS })
 
       let frameIndex = 0, currentUs = 0
       for (let s = 0; s < slides.length; s++) {
@@ -230,6 +232,7 @@ export default function SocialTab() {
           const frame = new VideoFrame(offscreen, { timestamp: currentUs })
           encoder.encode(frame, { keyFrame: f === 0 }); frame.close()
           currentUs += 1_000_000 / FPS; frameIndex++
+          if (encoderError) throw encoderError
           if (frameIndex % 10 === 0) await new Promise(r => setTimeout(r, 0))
         }
       }
