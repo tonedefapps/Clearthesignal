@@ -8,7 +8,6 @@ const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY!
 const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`
 
-
 async function verifyToken(idToken: string): Promise<string | null> {
   const res = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_API_KEY}`,
@@ -51,32 +50,33 @@ async function pollContainer(containerId: string, accessToken: string): Promise<
 }
 
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get('authorization') || ''
-  const idToken = authHeader.replace('Bearer ', '').trim()
-  if (!idToken) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-
-  const uid = await verifyToken(idToken)
-  if (!uid) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-
-  const role = await getUserRole(uid, idToken)
-  if (!role || !['admin', 'mod'].includes(role)) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
-  }
-
-  const ig = getIgCredentials()
-  if (!ig) return NextResponse.json({ error: 'instagram not connected' }, { status: 400 })
-
-  let body: { videoUrl: string; caption: string }
+  let videoUrl: string | null = null
   try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'invalid body' }, { status: 400 })
-  }
+    const authHeader = req.headers.get('authorization') || ''
+    const idToken = authHeader.replace('Bearer ', '').trim()
+    if (!idToken) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  if (!body.videoUrl) return NextResponse.json({ error: 'videoUrl required' }, { status: 400 })
-  const videoUrl = body.videoUrl
+    const uid = await verifyToken(idToken)
+    if (!uid) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  try {
+    const role = await getUserRole(uid, idToken)
+    if (!role || !['admin', 'mod'].includes(role)) {
+      return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+    }
+
+    const ig = getIgCredentials()
+    if (!ig) return NextResponse.json({ error: 'instagram not connected' }, { status: 400 })
+
+    let body: { videoUrl: string; caption: string }
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'invalid body' }, { status: 400 })
+    }
+
+    if (!body.videoUrl) return NextResponse.json({ error: 'videoUrl required' }, { status: 400 })
+    videoUrl = body.videoUrl
+
     // Create IG media container
     const containerRes = await fetch(
       `https://graph.instagram.com/v21.0/${ig.userId}/media`,
@@ -126,8 +126,9 @@ export async function POST(req: NextRequest) {
       permalink: permalinkData.permalink ?? null,
     })
   } catch (err) {
+    console.error('[post-reel] error:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
   } finally {
-    await del(videoUrl).catch(() => {})
+    if (videoUrl) await del(videoUrl).catch(() => {})
   }
 }
