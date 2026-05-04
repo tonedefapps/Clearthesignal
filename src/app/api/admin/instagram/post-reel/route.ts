@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { put, del } from '@vercel/blob'
+import { del } from '@vercel/blob'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -66,25 +66,15 @@ export async function POST(req: NextRequest) {
   const ig = getIgCredentials()
   if (!ig) return NextResponse.json({ error: 'instagram not connected' }, { status: 400 })
 
-  let body: { videoBase64: string; caption: string }
+  let body: { videoUrl: string; caption: string }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 })
   }
 
-  if (!body.videoBase64) return NextResponse.json({ error: 'videoBase64 required' }, { status: 400 })
-
-  // Decode base64 → Buffer → Blob
-  const buffer = Buffer.from(body.videoBase64, 'base64')
-  const videoBlob = new Blob([buffer], { type: 'video/mp4' })
-
-  // Upload to Vercel Blob for temp public URL
-  const blobResult = await put(`reels/reel-${Date.now()}.mp4`, videoBlob, {
-    access: 'public',
-    contentType: 'video/mp4',
-  })
-  const videoUrl = blobResult.url
+  if (!body.videoUrl) return NextResponse.json({ error: 'videoUrl required' }, { status: 400 })
+  const videoUrl = body.videoUrl
 
   try {
     // Create IG media container

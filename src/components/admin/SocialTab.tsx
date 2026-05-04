@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { upload } from '@vercel/blob/client'
 import { useAuth } from '@/context/AuthContext'
 
 interface VideoOption {
@@ -254,19 +255,24 @@ export default function SocialTab() {
     try {
       const token = await getToken()
       if (!token) throw new Error('not authenticated')
-      const arrayBuffer = await videoBlob.arrayBuffer()
-      const bytes = new Uint8Array(arrayBuffer)
-      let binary = ''
-      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
-      const videoBase64 = btoa(binary)
+
+      // Upload directly from browser to Vercel Blob (bypasses 4.5MB API limit)
+      const blob = await upload(`reels/reel-${Date.now()}.mp4`, videoBlob, {
+        access: 'public',
+        handleUploadUrl: '/api/admin/instagram/upload-reel',
+        clientPayload: token,
+      })
+
       const res = await fetch('/api/admin/instagram/post-reel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ videoBase64, caption }),
+        body: JSON.stringify({ videoUrl: blob.url, caption }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'post failed')
-      setPostedUrl(data.permalink ?? null); setVideoBlob(null)
+      let data: Record<string, unknown> = {}
+      try { data = await res.json() } catch { /* empty body */ }
+      if (!res.ok) throw new Error((data.error as string) ?? `post failed (${res.status})`)
+      setPostedUrl((data.permalink as string) ?? null)
+      setVideoBlob(null)
     } catch (e) {
       setPostError(String(e))
     } finally {
