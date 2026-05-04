@@ -11,8 +11,9 @@ import { getChannels, setChannelTier, type ChannelRecord, type ChannelTier } fro
 import { CANONICAL_TAGS } from '@/lib/constants/tags'
 import { getDb, doc, getDoc, setDoc, updateDoc, serverTimestamp } from '@/lib/firebase/server'
 import SiteNav from '@/components/SiteNav'
+import SocialTab from '@/components/admin/SocialTab'
 
-type Tab = 'overview' | 'pipeline' | 'channels' | 'dispatch' | 'feed' | 'team'
+type Tab = 'overview' | 'pipeline' | 'channels' | 'dispatch' | 'feed' | 'team' | 'social'
 
 const EMPTY_POST = { headline: '', url: '', source: '', note: '', tags: [] as string[] }
 
@@ -42,6 +43,7 @@ export default function AdminPage() {
     { id: 'dispatch', label: 'dispatch' },
     { id: 'feed', label: 'feed' },
     ...(profile?.role === 'admin' ? [{ id: 'team' as Tab, label: 'team' }] : []),
+    { id: 'social' as Tab, label: 'social' },
   ]
 
   return (
@@ -84,6 +86,7 @@ export default function AdminPage() {
         {tab === 'dispatch' && <DispatchTab user={user} profile={profile} />}
         {tab === 'feed' && <FeedTab user={user} profile={profile} />}
         {tab === 'team' && profile?.role === 'admin' && <TeamTab />}
+        {tab === 'social' && <SocialTab />}
       </div>
     </main>
   )
