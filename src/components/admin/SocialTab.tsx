@@ -127,6 +127,7 @@ export default function SocialTab() {
   const [caption, setCaption] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [refreshResult, setRefreshResult] = useState<string | null>(null)
+  const [uploadedBlobUrl, setUploadedBlobUrl] = useState<string | null>(null)
   const previewRef = useRef<HTMLCanvasElement>(null)
 
   const getToken = useCallback(async () => user ? await user.getIdToken() : null, [user])
@@ -292,6 +293,7 @@ export default function SocialTab() {
         handleUploadUrl: '/api/admin/instagram/upload-reel',
         clientPayload: token,
       })
+      setUploadedBlobUrl(blob.url)
 
       const res = await fetch('/api/admin/instagram/post-reel', {
         method: 'POST',
@@ -428,8 +430,14 @@ export default function SocialTab() {
 
       {/* Error */}
       {postError && (
-        <div className="bg-red-rock/10 border border-red-rock/25 rounded-xl p-4">
+        <div className="bg-red-rock/10 border border-red-rock/25 rounded-xl p-4 flex flex-col gap-2">
           <p className="text-sm text-red-rock/80">{postError}</p>
+          {uploadedBlobUrl && (
+            <div className="flex flex-col gap-1">
+              <p className="text-xs text-sand/40">blob url (test in Graph API Explorer):</p>
+              <p className="text-xs text-sand/60 break-all font-mono">{uploadedBlobUrl}</p>
+            </div>
+          )}
         </div>
       )}
 
