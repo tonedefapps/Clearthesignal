@@ -9,6 +9,7 @@ interface VideoOption {
   title: string
   channelTitle: string
   thumbnailUrl: string
+  youtubeUrl?: string
   amplifiedAnalysis?: {
     sections?: Array<{
       label: string
@@ -143,6 +144,7 @@ export default function SocialTab() {
             title: vid.title as string,
             channelTitle: (vid.channelTitle ?? vid.channel ?? '') as string,
             thumbnailUrl: vid.thumbnailUrl as string,
+            youtubeUrl: vid.youtubeUrl as string | undefined,
             amplifiedAnalysis: vid.amplifiedAnalysis as VideoOption['amplifiedAnalysis'],
           }
         })
@@ -273,6 +275,14 @@ export default function SocialTab() {
       muxer.finalize()
       setVideoBlob(new Blob([target.buffer], { type: 'video/mp4' }))
       setRenderProgress('')
+
+      // Auto-populate caption with CTS links for every featured video
+      const renderedVideos = videos.filter(v => selected.has(v.id))
+      const links = renderedVideos.map(v => `clearthesignal.com/v/${v.id}`).join('\n')
+      setCaption(prev => {
+        const base = prev.trim()
+        return base ? `${base}\n\n${links}` : links
+      })
     } catch (e) {
       setPostError(`Render failed: ${String(e)}`); setRenderProgress('')
     } finally {
