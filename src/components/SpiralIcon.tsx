@@ -238,13 +238,13 @@ export function HorizontalLockup({ height = 48, className }: { height?: number; 
       </g>
 
       {/* WORDMARK */}
-      <text x="62" y="19"
+      <text x="62" y="17"
         fontFamily="'DM Sans', system-ui, -apple-system, sans-serif"
-        fontSize="10.5" fontWeight="300" letterSpacing="4.5"
+        fontSize="13" fontWeight="300" letterSpacing="3.5"
         fill="#e0d8f0" opacity="0.88">CLEAR THE</text>
-      <text x="62" y="38"
+      <text x="62" y="41"
         fontFamily="'DM Sans', system-ui, -apple-system, sans-serif"
-        fontSize="15" fontWeight="400" letterSpacing="3.5"
+        fontSize="24" fontWeight="400" letterSpacing="2"
         fill="#a8c4e0" opacity="0.94">SIGNAL</text>
     </svg>
   )

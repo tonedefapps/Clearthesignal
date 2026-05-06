@@ -98,12 +98,12 @@
     <circle cx="60" cy="60" r="1.5" fill="#f0e8e0" opacity="0.97"/>
   </g>
   <!-- wordmark -->
-  <text x="62" y="19"
+  <text x="62" y="17"
     font-family="system-ui, -apple-system, sans-serif"
-    font-size="10.5" font-weight="300" letter-spacing="4.5"
+    font-size="13" font-weight="300" letter-spacing="3.5"
     fill="#e0d8f0" opacity="0.88">CLEAR THE</text>
-  <text x="62" y="38"
+  <text x="62" y="41"
     font-family="system-ui, -apple-system, sans-serif"
-    font-size="15" font-weight="400" letter-spacing="3.5"
+    font-size="24" font-weight="400" letter-spacing="2"
     fill="#a8c4e0" opacity="0.94">SIGNAL</text>
 </svg>
