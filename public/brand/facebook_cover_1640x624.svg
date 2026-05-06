@@ -44,27 +44,31 @@
   <circle cx="320"  cy="510" r="1.2" fill="#a8c4e0" opacity="0.18"/>
   <circle cx="1320" cy="520" r="1.4" fill="#a8c4e0" opacity="0.20"/>
 
-  <!-- spiral icon — centered at x=540, y=312, scaled to ~180px -->
-  <g transform="translate(540,312) scale(2.5) translate(-109,-755)">
-    <path d="M 117 760 C 117 753 109 747 103 750 C 95 754 92 763 96 770 C 100 778 110 780 117 776 C 126 770 128 760 122 752 C 117 743 106 740 96 743 C 84 747 78 759 82 772 C 86 786 99 792 113 789 C 129 786 138 771 135 756 C 132 739 118 730 102 731"
-      fill="none" stroke="#6b6fad" stroke-width="1.26" stroke-linecap="round" opacity="0.88"/>
-    <path d="M 102 731 C 109 723 116 715 119 707"
-      fill="none" stroke="#c4673a" stroke-width="1.17" stroke-linecap="round" opacity="0.95"/>
-    <circle cx="119" cy="707" r="1.98" fill="#c4673a" opacity="0.95"/>
-    <!-- orb center -->
-    <circle cx="109" cy="760" r="8.10"  fill="#c4673a" opacity="0.08"/>
-    <circle cx="109" cy="760" r="5.85"  fill="#c4673a" opacity="0.16"/>
-    <circle cx="109" cy="760" r="3.60"  fill="#d4845a" opacity="0.55"/>
-    <circle cx="109" cy="760" r="1.62"  fill="#f0e8e0" opacity="0.95"/>
-    <!-- star nodes -->
-    <circle cx="117" cy="760" r="1.98" fill="#a8c4e0" opacity="0.95"/>
-    <circle cx="109" cy="751" r="1.71" fill="#a8c4e0" opacity="0.85"/>
-    <circle cx="96"  cy="770" r="1.89" fill="#a8c4e0" opacity="0.92"/>
-    <circle cx="109" cy="780" r="1.71" fill="#a8c4e0" opacity="0.85"/>
-    <circle cx="123" cy="760" r="1.89" fill="#a8c4e0" opacity="0.92"/>
-    <circle cx="109" cy="740" r="1.71" fill="#a8c4e0" opacity="0.82"/>
-    <circle cx="135" cy="760" r="1.89" fill="#a8c4e0" opacity="0.85"/>
-    <circle cx="102" cy="731" r="1.71" fill="#a8c4e0" opacity="0.82"/>
+  <!-- spiral icon — centered at x=540, y=312, scaled to 300px -->
+  <g transform="translate(540,312) scale(2.5) translate(-60,-60)">
+    <polyline points="60,60 68,46 76,51 80,60 79,71 72,81 60,86 46,84 34,75 28,60 31,43 42,29 60,22 80,25 96,39 104,60"
+      fill="none" stroke="#6b6fad" stroke-width="0.75" stroke-linejoin="round" stroke-linecap="round" opacity="0.40"/>
+    <line x1="104" y1="60" x2="116" y2="14" stroke="#c4673a" stroke-width="0.85" stroke-linecap="round" opacity="0.68"/>
+    <circle cx="116" cy="14"  r="2.4" fill="#c4673a" opacity="0.95"/>
+    <circle cx="68"  cy="46"  r="1.0" fill="#a8c4e0" opacity="0.68"/>
+    <circle cx="76"  cy="51"  r="1.1" fill="#a8c4e0" opacity="0.72"/>
+    <circle cx="80"  cy="60"  r="1.1" fill="#a8c4e0" opacity="0.75"/>
+    <circle cx="79"  cy="71"  r="1.2" fill="#a8c4e0" opacity="0.78"/>
+    <circle cx="72"  cy="81"  r="1.2" fill="#a8c4e0" opacity="0.81"/>
+    <circle cx="60"  cy="86"  r="1.3" fill="#a8c4e0" opacity="0.84"/>
+    <circle cx="46"  cy="84"  r="1.3" fill="#a8c4e0" opacity="0.85"/>
+    <circle cx="34"  cy="75"  r="1.4" fill="#a8c4e0" opacity="0.87"/>
+    <circle cx="28"  cy="60"  r="1.4" fill="#a8c4e0" opacity="0.88"/>
+    <circle cx="31"  cy="43"  r="1.5" fill="#a8c4e0" opacity="0.89"/>
+    <circle cx="42"  cy="29"  r="1.5" fill="#a8c4e0" opacity="0.91"/>
+    <circle cx="60"  cy="22"  r="1.6" fill="#a8c4e0" opacity="0.92"/>
+    <circle cx="80"  cy="25"  r="1.6" fill="#a8c4e0" opacity="0.93"/>
+    <circle cx="96"  cy="39"  r="1.7" fill="#a8c4e0" opacity="0.95"/>
+    <circle cx="104" cy="60"  r="1.8" fill="#a8c4e0" opacity="0.96"/>
+    <circle cx="60" cy="60" r="7.5" fill="#1e1e35" opacity="0.90"/>
+    <circle cx="60" cy="60" r="5.5" fill="#c8a84b" opacity="0.28"/>
+    <circle cx="60" cy="60" r="3"   fill="#d4b85a" opacity="0.68"/>
+    <circle cx="60" cy="60" r="1.5" fill="#f0e8e0" opacity="0.97"/>
   </g>
 
   <!-- vertical rule -->
