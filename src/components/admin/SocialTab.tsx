@@ -22,7 +22,6 @@ const SLIDE_W = 1080
 const SLIDE_H = 1920
 const FPS = 30
 const SPLASH_DURATION_S = 3
-const CARD_DURATION_S = 4
 
 function getThumbnailProxyUrl(url: string): string {
   return `/api/proxy-image?url=${encodeURIComponent(url)}`
@@ -129,6 +128,7 @@ export default function SocialTab() {
   const [refreshing, setRefreshing] = useState(false)
   const [refreshResult, setRefreshResult] = useState<string | null>(null)
   const [uploadedBlobUrl, setUploadedBlobUrl] = useState<string | null>(null)
+  const [cardDuration, setCardDuration] = useState(6)
   const previewRef = useRef<HTMLCanvasElement>(null)
 
   const getToken = useCallback(async () => user ? await user.getIdToken() : null, [user])
@@ -206,7 +206,7 @@ export default function SocialTab() {
         ...selectedVideos.map((video, i): Slide => ({ type: 'video-card', video, thumb: thumbImages[i] })),
         { type: 'splash-close' },
       ]
-      const slideDurations = slides.map(s => s.type === 'video-card' ? CARD_DURATION_S : SPLASH_DURATION_S)
+      const slideDurations = slides.map(s => s.type === 'video-card' ? cardDuration : SPLASH_DURATION_S)
 
       const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
       const target = new ArrayBufferTarget()
@@ -387,12 +387,23 @@ export default function SocialTab() {
             <canvas ref={previewRef} width={180} height={320}
               className="rounded-xl border border-periwinkle/20 flex-shrink-0 bg-[#0d0a1a]" />
             <div className="flex flex-col gap-3 flex-1">
-              <p className="text-sm text-sand/60">
-                {selectedVideos.length} video{selectedVideos.length !== 1 ? 's' : ''}
-                <span className="text-sand/40 text-xs ml-2">
-                  ~{SPLASH_DURATION_S + selectedVideos.length * CARD_DURATION_S + SPLASH_DURATION_S}s
-                </span>
-              </p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <p className="text-sm text-sand/60">
+                  {selectedVideos.length} video{selectedVideos.length !== 1 ? 's' : ''}
+                  <span className="text-sand/40 text-xs ml-2">
+                    ~{SPLASH_DURATION_S + selectedVideos.length * cardDuration + SPLASH_DURATION_S}s
+                  </span>
+                </p>
+                <div className="flex items-center gap-1.5 ml-auto">
+                  <span className="text-xs text-sand/40">per video</span>
+                  {[5, 6, 7].map(s => (
+                    <button key={s} onClick={() => setCardDuration(s)}
+                      className={`px-2.5 py-1 rounded-lg text-xs transition-all ${cardDuration === s ? 'bg-periwinkle/30 text-periwinkle-light border border-periwinkle/40' : 'text-sand/40 hover:text-sand/60 border border-transparent'}`}>
+                      {s}s
+                    </button>
+                  ))}
+                </div>
+              </div>
               <button onClick={handleGenerate} disabled={rendering || selected.size < 3}
                 className="px-5 py-2.5 bg-periwinkle/20 border border-periwinkle/35 rounded-xl text-sm text-periwinkle-light hover:bg-periwinkle/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                 {rendering ? renderProgress || 'rendering...' : 'generate reel'}
