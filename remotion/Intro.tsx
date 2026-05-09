@@ -27,6 +27,10 @@ export function Intro() {
   const wordmarkOpacity = interpolate(frame, FRAMES.WORDMARK_FADE, [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
   const wordmarkY       = interpolate(frame, FRAMES.WORDMARK_FADE, [6, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
 
+  // Zoom-out: scale 1.5→1 from center-glow moment through wordmark reveal
+  const zoomProg  = interpolate(frame, [FRAMES.CENTER_GLOW[0], FRAMES.WORDMARK_FADE[1]], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+  const zoomScale = 1.5 - zoomProg * 0.5
+
   // ── Orb position ─────────────────────────────────────────────────────────────
   // Travels along tail first, then the spiral.
   let orbX = 116, orbY = 14
@@ -81,9 +85,9 @@ export function Intro() {
         </div>
       </div>
 
-      {/* main SVG — centered in frame */}
+      {/* main SVG — centered in frame, scales back on reveal */}
       <AbsoluteFill style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <svg viewBox="0 0 120 120" width={500} height={500} style={{ overflow: 'visible' }}>
+        <svg viewBox="0 0 120 120" width={500} height={500} style={{ overflow: 'visible', transform: `scale(${zoomScale})`, transformOrigin: 'center center' }}>
           <defs>
             <radialGradient id="orbGlowBlue" cx="50%" cy="50%" r="50%">
               <stop offset="0%"   stopColor="#ffffff"  stopOpacity="0.95" />

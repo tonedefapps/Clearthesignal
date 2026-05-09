@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { signOut } from '@/lib/firebase/auth'
-import { HorizontalLockup, SpiralIcon } from './SpiralIcon'
+import { SpiralIcon } from './SpiralIcon'
 import AuthStatus from './AuthStatus'
 
 interface SiteNavProps {
@@ -36,9 +36,15 @@ export default function SiteNav({ extra }: SiteNavProps) {
       <div className="flex items-center justify-between">
 
         {/* logo */}
-        <Link href="/" className="flex items-center">
-          <span className="sm:hidden"><SpiralIcon size={36} /></span>
-          <span className="hidden sm:block"><HorizontalLockup height={56} /></span>
+        <Link href="/" className="flex items-center gap-3">
+          <SpiralIcon size={36} className="sm:hidden" />
+          <span className="hidden sm:flex items-center gap-3">
+            <SpiralIcon size={40} />
+            <span className="flex flex-col leading-none gap-0.5">
+              <span className="text-[10px] font-light tracking-[0.35em] text-periwinkle-light/75">clear the</span>
+              <span className="text-lg font-normal tracking-[0.15em] text-desert-sky">signal</span>
+            </span>
+          </span>
         </Link>
 
         <div className="flex items-center gap-3 sm:gap-5">

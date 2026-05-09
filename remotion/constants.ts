@@ -10,6 +10,27 @@ export const COLORS = {
 // Tail: from red-rock terminal star (116,14) down to spiral junction (104,60)
 export const TAIL_PATH = 'M 116 14 L 104 60'
 
+// Reversed paths for outro outward traversal
+export const REVERSE_SPIRAL_PATH =
+  'M 60 60 ' +
+  'L 68 46 ' +
+  'L 76 51 ' +
+  'L 80 60 ' +
+  'L 79 71 ' +
+  'L 72 81 ' +
+  'L 60 86 ' +
+  'L 46 84 ' +
+  'L 34 75 ' +
+  'L 28 60 ' +
+  'L 31 43 ' +
+  'L 42 29 ' +
+  'L 60 22 ' +
+  'L 80 25 ' +
+  'L 96 39 ' +
+  'L 104 60'
+
+export const REVERSE_TAIL_PATH = 'M 104 60 L 116 14'
+
 // Spiral reversed: from junction (104,60) inward to center (60,60)
 export const SPIRAL_PATH =
   'M 104 60 ' +
@@ -159,11 +180,12 @@ export const FRAMES = {
   WORDMARK_FADE:  [76, 88] as [number, number],
 
   // Outro — 120 frames total (4s)
-  // Frames 0-30: brand lingers at full visibility before anything moves
-  O_WORDMARK_OUT: [30, 44] as [number, number], // wordmark fades slowly
-  O_CENTER_OUT:   [36, 48] as [number, number], // center glow collapses
-  O_SPIRAL_OUT:   [44, 84] as [number, number], // spiral retracts (40 frames)
-  O_TAIL_OUT:     [84, 98] as [number, number], // tail retracts (14 frames)
-  O_FLY_OFF:      [96, 116] as [number, number], // orb flies off, grows (20 frames)
-  O_FADE_OUT:     [108, 120] as [number, number], // fade to black
+  // Orb travels outward (center→junction→terminal star→off), then wordmark lands and fades
+  O_HOLD:         [0,  10]  as [number, number], // brief hold at center glow
+  O_CENTER_OUT:   [8,  22]  as [number, number], // center glow collapses as orb departs
+  O_SPIRAL_OUT:   [10, 65]  as [number, number], // orb travels center→junction (55 frames)
+  O_TAIL_OUT:     [65, 78]  as [number, number], // orb travels junction→terminal star (13 frames)
+  O_FLY_OFF:      [76, 96]  as [number, number], // orb flies off, grows (20 frames)
+  O_WORDMARK_IN:  [90, 108] as [number, number], // wordmark fades in after orb gone
+  O_FADE_OUT:     [110, 120] as [number, number], // fade to black
 }
