@@ -158,9 +158,9 @@ export const FLY_OFF_DIR = { x: 0.252, y: -0.968 }
 
 export const FPS = 30
 
-// Intro: origin appears → tail draws → spiral draws → center glow → wordmark
-// Total 3 seconds
-export const INTRO_FRAMES = 90
+// Intro: origin appears → tail draws → spiral draws → center glow → wordmark → 4s hold
+// 88 frames animation + 120 frames hold = 208 frames (~6.9s)
+export const INTRO_FRAMES = 208
 
 // Outro: hold → wordmark out → spiral retracts → tail retracts → orb flies off → fade
 // Total 4 seconds
