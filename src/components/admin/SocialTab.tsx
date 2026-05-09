@@ -50,15 +50,186 @@ function wrapText(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContex
   return lines
 }
 
-function drawSplashOpen(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) {
-  const grad = ctx.createLinearGradient(0, 0, 0, SLIDE_H)
-  grad.addColorStop(0, '#1a1430'); grad.addColorStop(1, '#0d0a1a')
-  ctx.fillStyle = grad; ctx.fillRect(0, 0, SLIDE_W, SLIDE_H)
-  ctx.fillStyle = '#a89fc8'; ctx.font = 'bold 96px system-ui, sans-serif'; ctx.textAlign = 'center'
-  ctx.fillText('CLEAR', SLIDE_W / 2, SLIDE_H / 2 - 60)
-  ctx.fillText('THE SIGNAL', SLIDE_W / 2, SLIDE_H / 2 + 60)
-  ctx.fillStyle = '#7d7a9a'; ctx.font = '36px system-ui, sans-serif'
-  ctx.fillText('daily curated insights', SLIDE_W / 2, SLIDE_H / 2 + 150)
+// ── Intro Animation (Canvas port of Remotion IntroReel) ──────────────────────
+const INTRO_TOTAL_FRAMES = 208
+const _S = 4, _OX = 300, _OY = 590  // 120-unit SVG → 480px block, centered in 1080
+
+function _ic(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)) }
+function _ii(f: number, f0: number, f1: number, v0: number, v1: number) {
+  return v0 + (v1 - v0) * _ic((f - f0) / (f1 - f0), 0, 1)
+}
+function _isp(f: number, k: number, d: number) {
+  if (f <= 0) return 0
+  let x = 0, v = 0
+  for (let i = 0; i < Math.min(f, 120); i++) { const a = k * (1 - x) - d * v; v += a / 30; x += v / 30 }
+  return _ic(x, 0, 1.5)
+}
+function _ilen(pts: [number, number][]) {
+  let n = 0
+  for (let i = 1; i < pts.length; i++) { const dx = pts[i][0]-pts[i-1][0], dy = pts[i][1]-pts[i-1][1]; n += Math.sqrt(dx*dx+dy*dy) }
+  return n
+}
+function _ipt(pts: [number, number][], d: number): [number, number] {
+  let r = d
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i][0]-pts[i-1][0], dy = pts[i][1]-pts[i-1][1], s = Math.sqrt(dx*dx+dy*dy)
+    if (r <= s) { const t = r/s; return [pts[i-1][0]+dx*t, pts[i-1][1]+dy*t] }
+    r -= s
+  }
+  return pts[pts.length-1]
+}
+const _px = (x: number) => _OX + x * _S
+const _py = (y: number) => _OY + y * _S
+
+const _TP: [number, number][] = [[116,14],[104,60]]
+const _SP: [number, number][] = [[104,60],[96,39],[80,25],[60,22],[42,29],[31,43],[28,60],[34,75],[46,84],[60,86],[72,81],[79,71],[80,60],[76,51],[68,46],[60,60]]
+const _TL = _ilen(_TP)
+const _SL = _ilen(_SP)
+
+const _ND = [
+  {cx:96,cy:39,r:1.7,t:0.10,o:0.95},{cx:80,cy:25,r:1.6,t:0.19,o:0.93},
+  {cx:60,cy:22,r:1.6,t:0.27,o:0.92},{cx:42,cy:29,r:1.5,t:0.35,o:0.91},
+  {cx:31,cy:43,r:1.5,t:0.43,o:0.89},{cx:28,cy:60,r:1.4,t:0.50,o:0.88},
+  {cx:34,cy:75,r:1.4,t:0.57,o:0.87},{cx:46,cy:84,r:1.3,t:0.64,o:0.85},
+  {cx:60,cy:86,r:1.3,t:0.70,o:0.84},{cx:72,cy:81,r:1.2,t:0.75,o:0.81},
+  {cx:79,cy:71,r:1.2,t:0.80,o:0.78},{cx:80,cy:60,r:1.1,t:0.85,o:0.75},
+  {cx:76,cy:51,r:1.1,t:0.89,o:0.72},{cx:68,cy:46,r:1.0,t:0.93,o:0.68},
+]
+
+const _ST = [
+  {cx:0,cy:4,r:.70,o:.26},{cx:13,cy:1,r:.55,o:.19},{cx:27,cy:6,r:.82,o:.28},
+  {cx:41,cy:2,r:.48,o:.16},{cx:57,cy:7,r:.64,o:.22},{cx:71,cy:1,r:.44,o:.15},
+  {cx:85,cy:5,r:.76,o:.26},{cx:99,cy:3,r:.52,o:.18},{cx:112,cy:7,r:.68,o:.23},
+  {cx:120,cy:2,r:.60,o:.20},{cx:0,cy:117,r:.72,o:.25},{cx:15,cy:120,r:.50,o:.17},
+  {cx:31,cy:114,r:.66,o:.22},{cx:47,cy:119,r:.42,o:.14},{cx:62,cy:116,r:.78,o:.26},
+  {cx:77,cy:120,r:.46,o:.16},{cx:91,cy:115,r:.60,o:.20},{cx:106,cy:119,r:.54,o:.18},
+  {cx:119,cy:113,r:.74,o:.25},{cx:2,cy:17,r:.68,o:.23},{cx:0,cy:31,r:.58,o:.20},
+  {cx:3,cy:46,r:.80,o:.27},{cx:1,cy:60,r:.52,o:.18},{cx:4,cy:74,r:.74,o:.25},
+  {cx:0,cy:88,r:.60,o:.20},{cx:3,cy:102,r:.66,o:.22},{cx:118,cy:21,r:.62,o:.21},
+  {cx:120,cy:35,r:.76,o:.26},{cx:117,cy:49,r:.50,o:.17},{cx:120,cy:63,r:.70,o:.24},
+  {cx:118,cy:77,r:.44,o:.15},{cx:120,cy:91,r:.80,o:.27},{cx:117,cy:105,r:.56,o:.19},
+  {cx:18,cy:14,r:.86,o:.29},{cx:44,cy:11,r:.44,o:.15},{cx:68,cy:15,r:.60,o:.20},
+  {cx:95,cy:12,r:.38,o:.12},{cx:9,cy:27,r:.52,o:.17},{cx:33,cy:22,r:.74,o:.25},
+  {cx:58,cy:29,r:.40,o:.13},{cx:81,cy:24,r:.88,o:.30},{cx:107,cy:28,r:.46,o:.15},
+  {cx:21,cy:38,r:.92,o:.31},{cx:48,cy:35,r:.36,o:.12},{cx:73,cy:42,r:.62,o:.21},
+  {cx:97,cy:36,r:.48,o:.16},{cx:12,cy:51,r:.58,o:.19},{cx:38,cy:47,r:.42,o:.14},
+  {cx:64,cy:53,r:.34,o:.11},{cx:88,cy:48,r:.80,o:.27},{cx:108,cy:54,r:.50,o:.17},
+  {cx:25,cy:63,r:.76,o:.26},{cx:50,cy:68,r:.38,o:.13},{cx:72,cy:61,r:.54,o:.18},
+  {cx:94,cy:66,r:.34,o:.11},{cx:110,cy:62,r:.66,o:.22},{cx:11,cy:76,r:.44,o:.15},
+  {cx:36,cy:71,r:.84,o:.28},{cx:57,cy:77,r:.36,o:.12},{cx:81,cy:73,r:.60,o:.20},
+  {cx:103,cy:79,r:.46,o:.15},{cx:18,cy:87,r:.70,o:.24},{cx:43,cy:83,r:.32,o:.10},
+  {cx:66,cy:90,r:.54,o:.18},{cx:90,cy:85,r:.78,o:.26},{cx:109,cy:91,r:.40,o:.13},
+  {cx:13,cy:100,r:.86,o:.29},{cx:38,cy:96,r:.40,o:.13},{cx:62,cy:102,r:.62,o:.21},
+  {cx:84,cy:98,r:.34,o:.11},{cx:105,cy:103,r:.72,o:.24},
+]
+
+function drawIntroFrame(ctx: OffscreenCanvasRenderingContext2D, frame: number) {
+  ctx.fillStyle = '#1e1e35'; ctx.fillRect(0, 0, SLIDE_W, SLIDE_H)
+  ctx.globalAlpha = 1
+
+  const fadeIn        = _ii(frame, 0, 4, 0, 1)
+  const tailProg      = _ii(frame, 8, 22, 0, 1)
+  const spiralProg    = _ii(frame, 22, 68, 0, 1)
+  const tailDrawn     = _TL * tailProg
+  const spiralDrawn   = _SL * spiralProg
+  const originOp      = _ii(frame, 0, 8, 0, 1)
+  const wordmarkOp    = _ii(frame, 76, 88, 0, 1)
+  const wordmarkDY    = _ii(frame, 76, 88, 10, 0)
+  const zoomScale     = 1.5 - _ic((frame - 68) / (88 - 68), 0, 1) * 0.5
+  const centerGlow    = frame >= 68 ? _isp(frame - 68, 55, 14) : 0
+  const junctionScale = tailProg >= 1 ? _isp(Math.max(0, frame - 22), 280, 16) : 0
+
+  let orbX = 116, orbY = 14, orbInTail = true
+  const orbVisible = frame >= 8 && frame < 74
+  if (frame >= 8) {
+    if (tailProg < 1) {
+      const [px, py] = _ipt(_TP, tailDrawn); orbX=px; orbY=py; orbInTail=true
+    } else if (frame < 74) {
+      const [px, py] = _ipt(_SP, spiralDrawn); orbX=px; orbY=py; orbInTail=false
+    }
+  }
+
+  const pivX = _px(60), pivY = _py(60)
+  ctx.save()
+  ctx.translate(pivX, pivY); ctx.scale(zoomScale, zoomScale); ctx.translate(-pivX, -pivY)
+
+  for (const s of _ST) {
+    ctx.beginPath(); ctx.arc(_px(s.cx), _py(s.cy), Math.max(0.5, s.r * _S * 0.5), 0, Math.PI*2)
+    ctx.fillStyle = '#d4c4a8'; ctx.globalAlpha = s.o * fadeIn; ctx.fill()
+  }
+
+  if (tailDrawn > 0) {
+    ctx.beginPath(); ctx.moveTo(_px(116), _py(14)); ctx.lineTo(_px(104), _py(60))
+    ctx.strokeStyle='#c4673a'; ctx.lineWidth=2.4*_S; ctx.lineCap='round'
+    ctx.setLineDash([tailDrawn*_S, _TL*_S]); ctx.globalAlpha=0.95*fadeIn; ctx.stroke(); ctx.setLineDash([])
+  }
+
+  if (spiralDrawn > 0) {
+    ctx.beginPath(); ctx.moveTo(_px(104), _py(60))
+    for (let i = 1; i < _SP.length; i++) ctx.lineTo(_px(_SP[i][0]), _py(_SP[i][1]))
+    ctx.strokeStyle='#6b6fad'; ctx.lineWidth=2.2*_S; ctx.lineCap='round'
+    ctx.setLineDash([spiralDrawn*_S, _SL*_S]); ctx.globalAlpha=0.88*fadeIn; ctx.stroke(); ctx.setLineDash([])
+  }
+
+  ctx.shadowColor='#c4673a'; ctx.shadowBlur=8*_S
+  ctx.beginPath(); ctx.arc(_px(116), _py(14), 3*_S, 0, Math.PI*2)
+  ctx.fillStyle='#c4673a'; ctx.globalAlpha=originOp*0.95*fadeIn; ctx.fill(); ctx.shadowBlur=0
+
+  if (junctionScale > 0) {
+    ctx.shadowColor='#a8c4e0'; ctx.shadowBlur=6*_S
+    ctx.beginPath(); ctx.arc(_px(104), _py(60), 1.8*_S*junctionScale, 0, Math.PI*2)
+    ctx.fillStyle='#a8c4e0'; ctx.globalAlpha=0.96*fadeIn; ctx.fill(); ctx.shadowBlur=0
+  }
+
+  for (const nd of _ND) {
+    const trigF = 22 + nd.t * (68 - 22)
+    const ns = frame >= trigF ? _isp(Math.max(0, frame - Math.round(trigF)), 280, 16) : 0
+    if (ns > 0) {
+      ctx.shadowColor='#a8c4e0'; ctx.shadowBlur=5*_S
+      ctx.beginPath(); ctx.arc(_px(nd.cx), _py(nd.cy), nd.r*_S*ns, 0, Math.PI*2)
+      ctx.fillStyle='#a8c4e0'; ctx.globalAlpha=nd.o*fadeIn; ctx.fill(); ctx.shadowBlur=0
+    }
+  }
+
+  if (orbVisible) {
+    const ocx = _px(orbX), ocy = _py(orbY)
+    const g1 = ctx.createRadialGradient(ocx, ocy, 0, ocx, ocy, 11*_S)
+    if (orbInTail) {
+      g1.addColorStop(0,'rgba(255,255,255,.95)'); g1.addColorStop(.25,'rgba(240,196,160,.8)'); g1.addColorStop(1,'rgba(196,103,58,0)')
+    } else {
+      g1.addColorStop(0,'rgba(255,255,255,.95)'); g1.addColorStop(.25,'rgba(200,223,240,.8)'); g1.addColorStop(1,'rgba(107,111,173,0)')
+    }
+    ctx.beginPath(); ctx.arc(ocx, ocy, 11*_S, 0, Math.PI*2)
+    ctx.fillStyle=g1; ctx.globalAlpha=0.55*fadeIn; ctx.fill()
+    ctx.shadowColor=orbInTail?'#ffddc0':'#e8f2ff'; ctx.shadowBlur=8*_S
+    ctx.beginPath(); ctx.arc(ocx, ocy, 2.8*_S, 0, Math.PI*2)
+    ctx.fillStyle=orbInTail?'#ffddc0':'#e8f2ff'; ctx.globalAlpha=0.98*fadeIn; ctx.fill(); ctx.shadowBlur=0
+  }
+
+  if (centerGlow > 0) {
+    const cc = _px(60), ccy = _py(60)
+    const g2 = ctx.createRadialGradient(cc, ccy, 0, cc, ccy, 16*_S*centerGlow)
+    g2.addColorStop(0,'rgba(168,196,224,.95)'); g2.addColorStop(.55,'rgba(107,111,173,.25)'); g2.addColorStop(1,'rgba(107,111,173,0)')
+    ctx.beginPath(); ctx.arc(cc, ccy, 16*_S*centerGlow, 0, Math.PI*2); ctx.fillStyle=g2; ctx.globalAlpha=0.45; ctx.fill()
+    ctx.beginPath(); ctx.arc(cc, ccy, 9*_S*centerGlow, 0, Math.PI*2); ctx.fillStyle='#6b6fad'; ctx.globalAlpha=0.18; ctx.fill()
+    ctx.beginPath(); ctx.arc(cc, ccy, 5.5*_S*centerGlow, 0, Math.PI*2); ctx.fillStyle='#8f93c9'; ctx.globalAlpha=0.55; ctx.fill()
+    ctx.shadowColor='#a8c4e0'; ctx.shadowBlur=10*_S
+    ctx.beginPath(); ctx.arc(cc, ccy, 2.5*_S*centerGlow, 0, Math.PI*2); ctx.fillStyle='#a8c4e0'; ctx.globalAlpha=0.98; ctx.fill()
+    ctx.shadowBlur=0
+  }
+
+  ctx.restore()
+  ctx.globalAlpha = 1
+
+  if (wordmarkOp > 0) {
+    const wY = _py(120) + 80 + wordmarkDY
+    ctx.globalAlpha = wordmarkOp; ctx.textAlign = 'center'
+    ctx.font = '300 44px system-ui, sans-serif'; ctx.fillStyle = '#a8c4e0'
+    ctx.fillText('CLEAR THE', SLIDE_W / 2, wY + 44)
+    ctx.font = '500 128px system-ui, sans-serif'; ctx.fillStyle = '#c4673a'
+    ctx.fillText('SIGNAL', SLIDE_W / 2, wY + 44 + 8 + 128)
+    ctx.globalAlpha = 1
+  }
 }
 
 function drawSplashClose(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) {
@@ -206,7 +377,11 @@ export default function SocialTab() {
         ...selectedVideos.map((video, i): Slide => ({ type: 'video-card', video, thumb: thumbImages[i] })),
         { type: 'splash-close' },
       ]
-      const slideDurations = slides.map(s => s.type === 'video-card' ? cardDuration : SPLASH_DURATION_S)
+      const slideDurations = slides.map(s => {
+        if (s.type === 'splash-open') return INTRO_TOTAL_FRAMES / FPS
+        if (s.type === 'video-card') return cardDuration
+        return SPLASH_DURATION_S
+      })
 
       const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
       const target = new ArrayBufferTarget()
@@ -240,7 +415,7 @@ export default function SocialTab() {
         const durationFrames = slideDurations[s] * FPS
         for (let f = 0; f < durationFrames; f++) {
           if (f === 0) setRenderProgress(`rendering slide ${s + 1} of ${slides.length}...`)
-          if (slide.type === 'splash-open') drawSplashOpen(octx)
+          if (slide.type === 'splash-open') drawIntroFrame(octx, f)
           else if (slide.type === 'splash-close') drawSplashClose(octx)
           else drawVideoCard(octx, slide.video, slide.thumb)
           const frame = new VideoFrame(offscreen, { timestamp: currentUs })
@@ -391,7 +566,7 @@ export default function SocialTab() {
                 <p className="text-sm text-sand/60">
                   {selectedVideos.length} video{selectedVideos.length !== 1 ? 's' : ''}
                   <span className="text-sand/40 text-xs ml-2">
-                    ~{SPLASH_DURATION_S + selectedVideos.length * cardDuration + SPLASH_DURATION_S}s
+                    ~{Math.round(INTRO_TOTAL_FRAMES / FPS + selectedVideos.length * cardDuration + SPLASH_DURATION_S)}s
                   </span>
                 </p>
                 <div className="flex items-center gap-1.5 ml-auto">
