@@ -123,6 +123,15 @@ const _ST = [
   {cx:84,cy:98,r:.34,o:.11},{cx:105,cy:103,r:.72,o:.24},
 ]
 
+// Full-canvas starfield in pixel space (covers entire 1080×1920 frame)
+const _CST = (() => {
+  const out: {cx:number,cy:number,r:number,o:number}[] = []
+  let sd = 314159
+  const rng = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 0x100000000 }
+  for (let i = 0; i < 180; i++) out.push({cx:rng()*SLIDE_W, cy:rng()*SLIDE_H, r:0.5+rng()*2.5, o:0.06+rng()*0.28})
+  return out
+})()
+
 function drawIntroFrame(ctx: OffscreenCanvasRenderingContext2D, frame: number) {
   ctx.fillStyle = '#1e1e35'; ctx.fillRect(0, 0, SLIDE_W, SLIDE_H)
   ctx.globalAlpha = 1
@@ -147,6 +156,12 @@ function drawIntroFrame(ctx: OffscreenCanvasRenderingContext2D, frame: number) {
     } else if (frame < 74) {
       const [px, py] = _ipt(_SP, spiralDrawn); orbX=px; orbY=py; orbInTail=false
     }
+  }
+
+  // Full-canvas starfield (outside zoom, covers entire frame)
+  for (const s of _CST) {
+    ctx.beginPath(); ctx.arc(s.cx, s.cy, s.r, 0, Math.PI*2)
+    ctx.fillStyle = '#d4c4a8'; ctx.globalAlpha = s.o * fadeIn; ctx.fill()
   }
 
   const pivX = _px(60), pivY = _py(60)
@@ -232,14 +247,141 @@ function drawIntroFrame(ctx: OffscreenCanvasRenderingContext2D, frame: number) {
   }
 }
 
-function drawSplashClose(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) {
-  const grad = ctx.createLinearGradient(0, 0, 0, SLIDE_H)
-  grad.addColorStop(0, '#1a1430'); grad.addColorStop(1, '#0d0a1a')
-  ctx.fillStyle = grad; ctx.fillRect(0, 0, SLIDE_W, SLIDE_H)
-  ctx.fillStyle = '#a89fc8'; ctx.font = 'bold 72px system-ui, sans-serif'; ctx.textAlign = 'center'
-  ctx.fillText('follow for daily signal', SLIDE_W / 2, SLIDE_H / 2 - 40)
-  ctx.fillStyle = '#7d7a9a'; ctx.font = '48px system-ui, sans-serif'
-  ctx.fillText('@clearthesignal', SLIDE_W / 2, SLIDE_H / 2 + 60)
+// ── Outro Animation (reverse of intro: orb departs center, flies off, wordmark lands) ──
+const OUTRO_TOTAL_FRAMES = 120
+
+const _RSP: [number,number][] = [[60,60],[68,46],[76,51],[80,60],[79,71],[72,81],[60,86],[46,84],[34,75],[28,60],[31,43],[42,29],[60,22],[80,25],[96,39],[104,60]]
+const _RTP: [number,number][] = [[104,60],[116,14]]
+const _RSL = _ilen(_RSP)
+const _RTL = _ilen(_RTP)
+const _FOX = 0.252, _FOY = -0.968  // fly-off direction (normalized)
+
+function _outroNodeOp(spiralOutProg: number, frame: number, t: number): number {
+  const tRev = 1 - t
+  if (spiralOutProg < tRev) return 1
+  return Math.max(0, 1 - _isp(Math.max(0, frame - Math.round(10 + tRev * 55)), 280, 16))
+}
+
+function drawOutroFrame(ctx: OffscreenCanvasRenderingContext2D, frame: number) {
+  ctx.fillStyle = '#1e1e35'; ctx.fillRect(0, 0, SLIDE_W, SLIDE_H)
+  ctx.globalAlpha = 1
+
+  const spiralOutProg = _ii(frame, 10, 65, 0, 1)
+  const tailOutProg   = _ii(frame, 65, 78, 0, 1)
+  const spiralVisible = _SL * (1 - spiralOutProg)
+  const centerGlow    = frame < 8 ? 1 : Math.max(0, 1 - _isp(frame - 8, 70, 12))
+  const junctionOp    = frame < 65 ? 1 : _ii(frame, 65, 73, 1, 0)
+  const tailOp        = frame < 76 ? 0.95 : _ii(frame, 76, 96, 0.95, 0)
+  const originOp      = frame < 76 ? 0.95 : _ii(frame, 76, 82, 0.95, 0)
+  const orbScale      = frame >= 78 ? _ii(frame, 78, 96, 1, 6) : 1
+  const orbOpacity    = frame < 76 ? 1 : _ii(frame, 84, 96, 1, 0)
+  const wordmarkOp    = _ii(frame, 90, 108, 0, 1) * _ii(frame, 110, 120, 1, 0)
+  const wordmarkDY    = _ii(frame, 90, 108, 8, 0)
+
+  let orbCX = _px(60), orbCY = _py(60), orbInTail = false, orbVisible = true
+  if (frame < 10) {
+    orbCX = _px(60); orbCY = _py(60)
+  } else if (frame < 65) {
+    const [px,py] = _ipt(_RSP, _RSL * spiralOutProg); orbCX=_px(px); orbCY=_py(py)
+  } else if (frame < 78) {
+    const [px,py] = _ipt(_RTP, _RTL * tailOutProg); orbCX=_px(px); orbCY=_py(py); orbInTail=true
+  } else if (frame < 96) {
+    const eased = Math.pow(_ii(frame, 78, 96, 0, 1), 2)
+    orbCX=_px(116)+_FOX*eased*2200; orbCY=_py(14)+_FOY*eased*2200; orbInTail=true
+  } else { orbVisible=false }
+
+  // Full-canvas starfield
+  for (const s of _CST) {
+    ctx.beginPath(); ctx.arc(s.cx, s.cy, s.r, 0, Math.PI*2)
+    ctx.fillStyle='#d4c4a8'; ctx.globalAlpha=s.o; ctx.fill()
+  }
+  // SVG-area starfield
+  for (const s of _ST) {
+    ctx.beginPath(); ctx.arc(_px(s.cx), _py(s.cy), Math.max(0.5, s.r*_S*0.5), 0, Math.PI*2)
+    ctx.fillStyle='#d4c4a8'; ctx.globalAlpha=s.o; ctx.fill()
+  }
+
+  // Tail
+  ctx.beginPath(); ctx.moveTo(_px(116),_py(14)); ctx.lineTo(_px(104),_py(60))
+  ctx.strokeStyle='#c4673a'; ctx.lineWidth=2.4*_S; ctx.lineCap='round'
+  ctx.setLineDash([]); ctx.globalAlpha=tailOp; ctx.stroke()
+
+  // Spiral (retracts from center as orb moves outward)
+  if (spiralVisible > 0) {
+    ctx.beginPath(); ctx.moveTo(_px(104),_py(60))
+    for (let i=1; i<_SP.length; i++) ctx.lineTo(_px(_SP[i][0]),_py(_SP[i][1]))
+    ctx.strokeStyle='#6b6fad'; ctx.lineWidth=2.2*_S; ctx.lineCap='round'
+    ctx.setLineDash([spiralVisible*_S, _SL*_S]); ctx.globalAlpha=0.88; ctx.stroke(); ctx.setLineDash([])
+  }
+
+  // Origin star
+  ctx.shadowColor='#c4673a'; ctx.shadowBlur=8*_S
+  ctx.beginPath(); ctx.arc(_px(116),_py(14),3*_S,0,Math.PI*2)
+  ctx.fillStyle='#c4673a'; ctx.globalAlpha=originOp; ctx.fill(); ctx.shadowBlur=0
+
+  // Junction node
+  ctx.shadowColor='#a8c4e0'; ctx.shadowBlur=6*_S
+  ctx.beginPath(); ctx.arc(_px(104),_py(60),1.8*_S,0,Math.PI*2)
+  ctx.fillStyle='#a8c4e0'; ctx.globalAlpha=0.96*junctionOp; ctx.fill(); ctx.shadowBlur=0
+
+  // Constellation nodes (pop off as orb passes outward)
+  for (const nd of _ND) {
+    const nodeOp = _outroNodeOp(spiralOutProg, frame, nd.t)
+    if (nodeOp > 0) {
+      ctx.shadowColor='#a8c4e0'; ctx.shadowBlur=5*_S
+      ctx.beginPath(); ctx.arc(_px(nd.cx),_py(nd.cy),nd.r*_S,0,Math.PI*2)
+      ctx.fillStyle='#a8c4e0'; ctx.globalAlpha=nd.o*nodeOp; ctx.fill(); ctx.shadowBlur=0
+    }
+  }
+
+  // Orb
+  if (orbVisible && orbOpacity > 0) {
+    const g1 = ctx.createRadialGradient(orbCX,orbCY,0,orbCX,orbCY,18*_S*orbScale)
+    if (orbInTail) { g1.addColorStop(0,'rgba(255,255,255,.95)');g1.addColorStop(.2,'rgba(240,196,160,.85)');g1.addColorStop(1,'rgba(196,103,58,0)') }
+    else           { g1.addColorStop(0,'rgba(255,255,255,.95)');g1.addColorStop(.2,'rgba(200,223,240,.85)');g1.addColorStop(1,'rgba(107,111,173,0)') }
+    ctx.beginPath(); ctx.arc(orbCX,orbCY,18*_S*orbScale,0,Math.PI*2)
+    ctx.fillStyle=g1; ctx.globalAlpha=0.35*orbOpacity; ctx.fill()
+    const g2 = ctx.createRadialGradient(orbCX,orbCY,0,orbCX,orbCY,11*_S*orbScale)
+    if (orbInTail) { g2.addColorStop(0,'rgba(255,255,255,.95)');g2.addColorStop(.2,'rgba(240,196,160,.85)');g2.addColorStop(1,'rgba(196,103,58,0)') }
+    else           { g2.addColorStop(0,'rgba(255,255,255,.95)');g2.addColorStop(.2,'rgba(200,223,240,.85)');g2.addColorStop(1,'rgba(107,111,173,0)') }
+    ctx.beginPath(); ctx.arc(orbCX,orbCY,11*_S*orbScale,0,Math.PI*2)
+    ctx.fillStyle=g2; ctx.globalAlpha=0.55*orbOpacity; ctx.fill()
+    ctx.shadowColor=orbInTail?'#ffddc0':'#e8f2ff'; ctx.shadowBlur=8*_S*orbScale
+    ctx.beginPath(); ctx.arc(orbCX,orbCY,2.8*_S*orbScale,0,Math.PI*2)
+    ctx.fillStyle=orbInTail?'#ffddc0':'#e8f2ff'; ctx.globalAlpha=0.98*orbOpacity; ctx.fill(); ctx.shadowBlur=0
+  }
+
+  // Center glow (full at start, collapses as orb departs)
+  if (centerGlow > 0) {
+    const cc=_px(60), ccy=_py(60)
+    const g3=ctx.createRadialGradient(cc,ccy,0,cc,ccy,16*_S*centerGlow)
+    g3.addColorStop(0,'rgba(168,196,224,.95)');g3.addColorStop(.55,'rgba(107,111,173,.25)');g3.addColorStop(1,'rgba(107,111,173,0)')
+    ctx.beginPath(); ctx.arc(cc,ccy,16*_S*centerGlow,0,Math.PI*2); ctx.fillStyle=g3; ctx.globalAlpha=0.45; ctx.fill()
+    ctx.beginPath(); ctx.arc(cc,ccy,9*_S*centerGlow,0,Math.PI*2); ctx.fillStyle='#6b6fad'; ctx.globalAlpha=0.18; ctx.fill()
+    ctx.beginPath(); ctx.arc(cc,ccy,5.5*_S*centerGlow,0,Math.PI*2); ctx.fillStyle='#8f93c9'; ctx.globalAlpha=0.55; ctx.fill()
+    ctx.shadowColor='#a8c4e0'; ctx.shadowBlur=10*_S
+    ctx.beginPath(); ctx.arc(cc,ccy,2.5*_S*centerGlow,0,Math.PI*2); ctx.fillStyle='#a8c4e0'; ctx.globalAlpha=0.98; ctx.fill()
+    ctx.shadowBlur=0
+  }
+
+  ctx.globalAlpha = 1
+
+  // Wordmark lands after orb flies off
+  if (wordmarkOp > 0) {
+    const wY = _py(120) + 80 + wordmarkDY
+    ctx.globalAlpha=wordmarkOp; ctx.textAlign='center'
+    ctx.font='300 44px system-ui, sans-serif'; ctx.fillStyle='#a8c4e0'
+    ctx.fillText('CLEAR THE', SLIDE_W/2, wY+44)
+    ctx.font='500 128px system-ui, sans-serif'; ctx.fillStyle='#c4673a'
+    ctx.fillText('SIGNAL', SLIDE_W/2, wY+44+8+128)
+    ctx.globalAlpha=1
+  }
+
+  // Fade to black
+  const fadeOut = _ii(frame, 110, 120, 0, 1)
+  if (fadeOut > 0) {
+    ctx.globalAlpha=fadeOut; ctx.fillStyle='#1e1e35'; ctx.fillRect(0,0,SLIDE_W,SLIDE_H); ctx.globalAlpha=1
+  }
 }
 
 function drawVideoCard(
@@ -379,6 +521,7 @@ export default function SocialTab() {
       ]
       const slideDurations = slides.map(s => {
         if (s.type === 'splash-open') return INTRO_TOTAL_FRAMES / FPS
+        if (s.type === 'splash-close') return OUTRO_TOTAL_FRAMES / FPS
         if (s.type === 'video-card') return cardDuration
         return SPLASH_DURATION_S
       })
@@ -416,7 +559,7 @@ export default function SocialTab() {
         for (let f = 0; f < durationFrames; f++) {
           if (f === 0) setRenderProgress(`rendering slide ${s + 1} of ${slides.length}...`)
           if (slide.type === 'splash-open') drawIntroFrame(octx, f)
-          else if (slide.type === 'splash-close') drawSplashClose(octx)
+          else if (slide.type === 'splash-close') drawOutroFrame(octx, f)
           else drawVideoCard(octx, slide.video, slide.thumb)
           const frame = new VideoFrame(offscreen, { timestamp: currentUs })
           encoder.encode(frame, { keyFrame: f === 0 }); frame.close()
@@ -566,7 +709,7 @@ export default function SocialTab() {
                 <p className="text-sm text-sand/60">
                   {selectedVideos.length} video{selectedVideos.length !== 1 ? 's' : ''}
                   <span className="text-sand/40 text-xs ml-2">
-                    ~{Math.round(INTRO_TOTAL_FRAMES / FPS + selectedVideos.length * cardDuration + SPLASH_DURATION_S)}s
+                    ~{Math.round(INTRO_TOTAL_FRAMES / FPS + selectedVideos.length * cardDuration + OUTRO_TOTAL_FRAMES / FPS)}s
                   </span>
                 </p>
                 <div className="flex items-center gap-1.5 ml-auto">
