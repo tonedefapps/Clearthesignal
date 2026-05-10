@@ -424,6 +424,75 @@ function drawVideoCard(
   ctx.textAlign = 'center'
 }
 
+// ── Audio Generation ─────────────────────────────────────────────────────────
+
+async function generateAudioBuffer(
+  totalS: number, introEndS: number, outroStartS: number
+): Promise<[Float32Array, Float32Array]> {
+  const SR = 48000
+  const ctx = new OfflineAudioContext(2, Math.ceil(totalS * SR), SR)
+  const master = ctx.createGain(); master.gain.value = 0.65; master.connect(ctx.destination)
+
+  function addTone(freq: number, t: number, dur: number, gain: number, atk = 0.05) {
+    const osc = ctx.createOscillator(), g = ctx.createGain()
+    osc.type = 'sine'; osc.frequency.value = freq
+    g.gain.setValueAtTime(0, t)
+    g.gain.linearRampToValueAtTime(gain, t + atk)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+    osc.connect(g); g.connect(master); osc.start(t); osc.stop(t + dur + 0.05)
+  }
+
+  function addNoise(t: number, dur: number, gain: number, centerFreq: number, q = 0.5) {
+    const sz = Math.ceil(dur * SR)
+    const buf = ctx.createBuffer(1, sz, SR)
+    const d = buf.getChannelData(0); for (let i = 0; i < sz; i++) d[i] = Math.random() * 2 - 1
+    const src = ctx.createBufferSource(); src.buffer = buf
+    const filt = ctx.createBiquadFilter(); filt.type = 'bandpass'
+    filt.frequency.value = centerFreq; filt.Q.value = q
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + 0.03)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+    src.connect(filt); filt.connect(g); g.connect(master); src.start(t); src.stop(t + dur)
+  }
+
+  // ── Intro ─────────────────────────────────────────────────────────────────
+  addTone(110, 0, introEndS, 0.06, 1.2)           // deep space pad
+  addTone(220, 0.5, introEndS - 0.5, 0.03, 1.8)   // octave shimmer
+  addNoise(0.27, 0.6, 0.04, 1000)                  // tail trace
+  // Node sparkles as constellation maps itself
+  const ss = 22/30, se = 68/30
+  const nodeData: [number, number][] = [
+    [.10,523],[.19,587],[.27,659],[.35,740],[.43,830],[.50,932],
+    [.57,1047],[.64,1175],[.70,1047],[.75,932],[.80,830],[.85,740],[.89,659],[.93,587],
+  ]
+  nodeData.forEach(([t, freq]) => addTone(freq, ss + t*(se-ss), 0.25, 0.012, 0.01))
+  // Center glow ignition
+  addTone(880, 2.27, 3.0, 0.09, 0.02)
+  addTone(1320, 2.30, 2.2, 0.04, 0.02)
+  addNoise(2.27, 0.35, 0.07, 2500, 0.4)
+  // Wordmark resolves and holds
+  addTone(440, 2.53, introEndS - 2.53, 0.07, 0.15)
+  addTone(330, 2.65, introEndS - 2.65, 0.03, 0.20)
+
+  // ── Outro ─────────────────────────────────────────────────────────────────
+  const os = outroStartS
+  addTone(110, os, 4.0, 0.05, 0.4)                // grounding pad
+  addTone(880, os, 0.8, 0.06, 0.03)               // center glow resonance echo
+  addTone(165, os + 0.33, 2.3, 0.04, 0.5)         // departure tension
+  addTone(220, os + 0.80, 1.8, 0.02, 0.5)
+  // Fly-off whoosh (layered low→mid→high)
+  const fo = os + 78/30
+  addNoise(fo,        1.10, 0.12, 300,  0.3)
+  addNoise(fo + 0.15, 0.80, 0.08, 1200, 0.35)
+  addNoise(fo + 0.25, 0.55, 0.05, 4500, 0.4)
+  // Wordmark landing chime
+  addTone(440, os + 3.0,  1.5, 0.06, 0.06)
+  addTone(880, os + 3.07, 1.0, 0.03, 0.02)
+
+  const rendered = await ctx.startRendering()
+  return [rendered.getChannelData(0).slice(), rendered.getChannelData(1).slice()]
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SocialTab() {
@@ -569,19 +638,28 @@ export default function SocialTab() {
         }
       }
 
-      // Encode silent audio track for full video duration
-      const totalSamples = Math.ceil(AUDIO_SAMPLE_RATE * (currentUs / 1_000_000))
+      // Generate and encode branded audio
+      setRenderProgress('generating audio...')
+      const totalDurationS = currentUs / 1_000_000
+      const [leftCh, rightCh] = await generateAudioBuffer(
+        totalDurationS,
+        INTRO_TOTAL_FRAMES / FPS,
+        totalDurationS - OUTRO_TOTAL_FRAMES / FPS
+      )
+      const totalSamples = leftCh.length
       const CHUNK = 1024
-      const silence = new Float32Array(CHUNK * AUDIO_CHANNELS)
       for (let offset = 0; offset < totalSamples; offset += CHUNK) {
         const frames = Math.min(CHUNK, totalSamples - offset)
+        const chunkData = new Float32Array(frames * 2)
+        chunkData.set(leftCh.subarray(offset, offset + frames), 0)
+        chunkData.set(rightCh.subarray(offset, offset + frames), frames)
         const audioData = new AudioData({
           format: 'f32-planar',
           sampleRate: AUDIO_SAMPLE_RATE,
           numberOfFrames: frames,
           numberOfChannels: AUDIO_CHANNELS,
           timestamp: Math.round((offset / AUDIO_SAMPLE_RATE) * 1_000_000),
-          data: silence.slice(0, frames * AUDIO_CHANNELS),
+          data: chunkData,
         })
         audioEncoder.encode(audioData)
         audioData.close()
