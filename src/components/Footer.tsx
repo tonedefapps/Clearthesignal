@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { HorizontalLockup } from './SpiralIcon'
+import { SpiralIcon } from './SpiralIcon'
 import { InstagramIcon, RedditIcon, DiscordIcon } from './SocialIcons'
 
 const SOCIALS = [
@@ -25,7 +25,7 @@ const SOCIALS = [
 
 export default function Footer() {
   return (
-    <footer className="border-t border-periwinkle/15 px-6 pt-16 pb-10">
+    <footer className="border-t border-white/8 px-6 pt-16 pb-10">
       <div className="max-w-4xl mx-auto">
 
         {/* main row */}
@@ -33,7 +33,13 @@ export default function Footer() {
 
           {/* brand */}
           <div className="flex flex-col items-center sm:items-start gap-4">
-            <HorizontalLockup height={44} />
+            <div className="flex items-center gap-3">
+              <SpiralIcon size={32} />
+              <span className="flex flex-col leading-none gap-0.5">
+                <span className="text-[10px] font-light tracking-[0.35em] text-periwinkle-light/75">clear the</span>
+                <span className="text-base font-normal tracking-[0.15em] text-desert-sky">signal</span>
+              </span>
+            </div>
             <p className="text-sand/40 text-sm leading-relaxed max-w-[260px] text-center sm:text-left">
               curated daily for those paying attention.<br />no algorithm. no agenda. no noise.
             </p>
@@ -72,7 +78,7 @@ export default function Footer() {
         </div>
 
         {/* bottom bar */}
-        <div className="border-t border-periwinkle/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="border-t border-white/6 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-6">
             <Link href="/signal" className="text-xs text-sand/35 hover:text-sand/60 transition-colors tracking-wide">
               dispatch

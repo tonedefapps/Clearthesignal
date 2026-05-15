@@ -64,12 +64,12 @@ export default function AdminPage() {
         </div>
 
         {/* tabs */}
-        <div className="flex gap-1 bg-mesa-light/60 border border-periwinkle/15 rounded-xl p-1 mb-8">
+        <div className="flex gap-1 bg-mesa-light/60 border border-periwinkle/15 rounded-xl p-1 mb-8 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex-1 text-sm py-2 px-3 rounded-lg transition-all ${
+              className={`shrink-0 text-sm py-2 px-3 rounded-lg transition-all whitespace-nowrap ${
                 tab === t.id
                   ? 'bg-periwinkle/25 text-periwinkle-light font-medium'
                   : 'text-sand/50 hover:text-sand/80'

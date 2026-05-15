@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import YouTube from 'react-youtube'
 import VideoCard from '@/components/VideoCard'
 import TagFilter from '@/components/TagFilter'
 import { useAuth } from '@/context/AuthContext'
@@ -30,9 +31,11 @@ export default function HomePage() {
   const [showSwipeHint, setShowSwipeHint] = useState(true)
   const [hoveredTags, setHoveredTags] = useState<string[]>([])
   const carouselRef = useRef<HTMLDivElement>(null)
+  const playerRef = useRef<HTMLDivElement>(null)
   const [atStart, setAtStart] = useState(true)
   const [atEnd, setAtEnd] = useState(false)
   const [isOverflowing, setIsOverflowing] = useState(false)
+  const [nowPlayingId, setNowPlayingId] = useState<string | null>(null)
 
   function handleScroll() {
     const el = carouselRef.current
@@ -92,23 +95,46 @@ export default function HomePage() {
       )
     : videos
 
+  const nowPlayingIdx = nowPlayingId ? filteredVideos.findIndex(v => v.id === nowPlayingId) : -1
+  const nowPlaying = nowPlayingIdx >= 0 ? filteredVideos[nowPlayingIdx] : null
+
+  function handlePlay(id: string) {
+    setNowPlayingId(id)
+    setTimeout(() => playerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
+
+  function handleEnd() {
+    if (nowPlayingIdx < 0 || filteredVideos.length === 0) return
+    const nextIdx = (nowPlayingIdx + 1) % filteredVideos.length
+    setNowPlayingId(filteredVideos[nextIdx].id)
+  }
+
+  function getYouTubeId(video: Video): string {
+    return video.youtubeUrl?.match(/(?:v=|youtu\.be\/)([^&?/]+)/)?.[1] ?? video.id
+  }
+
   return (
     <main className="min-h-screen text-white">
 
       <SiteNav />
 
       {/* hero */}
-      <section className="px-6 pt-20 pb-16 max-w-4xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 text-xs text-periwinkle-light bg-periwinkle/10 border border-periwinkle/25 rounded-full px-3 py-1 mb-8">
+      <section className="px-6 pt-28 pb-20 max-w-4xl mx-auto text-center">
+        <div className="inline-flex items-center gap-2 text-xs text-periwinkle-light bg-periwinkle/10 border border-periwinkle/25 rounded-full px-3 py-1 mb-10">
           <span className="w-1.5 h-1.5 bg-periwinkle rounded-full animate-pulse" />
           updated daily
         </div>
-        <h1 className="text-5xl sm:text-6xl font-medium tracking-tight mb-4 leading-tight">
-          <span className="text-desert-sky">clear the signal.</span>
+        <h1 className="text-5xl sm:text-6xl font-medium tracking-tight mb-5 leading-tight">
+          <span
+            className="text-desert-sky"
+            style={{ textShadow: '0 0 60px rgba(168,196,224,0.2)' }}
+          >
+            clear the signal.
+          </span>
           <br />
           <span className="text-red-rock">find your frequency.</span>
         </h1>
-        <p className="text-white/60 text-lg max-w-xl mx-auto leading-relaxed font-light">
+        <p className="text-white/50 text-lg max-w-xl mx-auto leading-relaxed font-light">
           focus on the message. not the noise.
         </p>
       </section>
@@ -116,6 +142,46 @@ export default function HomePage() {
       <SignalStrip />
 
       <AmplifiedSection />
+
+      {/* inline player */}
+      {nowPlaying && (
+        <section ref={playerRef} className="w-full max-w-4xl mx-auto px-4 mb-10">
+          <div className="bg-mesa-light/60 border border-periwinkle/20 rounded-2xl overflow-hidden shadow-[0_8px_48px_rgba(0,0,0,0.6)]">
+            <div className="relative w-full aspect-video bg-black">
+              <YouTube
+                videoId={getYouTubeId(nowPlaying)}
+                opts={{ width: '100%', height: '100%', playerVars: { autoplay: 1, rel: 0, modestbranding: 1 } }}
+                onEnd={handleEnd}
+                className="absolute inset-0"
+                iframeClassName="w-full h-full"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-xs text-desert-sky/60 mb-0.5">{nowPlaying.channelName}</p>
+                <p className="text-sm font-medium text-white/90 leading-snug truncate">{nowPlaying.title}</p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                {nowPlayingIdx < filteredVideos.length - 1 && (
+                  <button
+                    onClick={() => setNowPlayingId(filteredVideos[nowPlayingIdx + 1].id)}
+                    className="text-xs text-sand/50 hover:text-desert-sky transition-colors flex items-center gap-1"
+                  >
+                    next ⏭
+                  </button>
+                )}
+                <button
+                  onClick={() => setNowPlayingId(null)}
+                  className="text-xs text-sand/40 hover:text-white transition-colors"
+                  aria-label="close player"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* feed */}
       <section id="feed" className="pb-24">
@@ -132,7 +198,7 @@ export default function HomePage() {
               placeholder="search by title or topic..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-mesa-light/50 border border-periwinkle/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-sand/30 focus:outline-none focus:border-periwinkle/45 transition-colors"
+              className="w-full bg-white/[0.05] backdrop-blur-sm border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-sand/30 focus:outline-none focus:border-periwinkle/40 focus:bg-white/[0.07] transition-all"
             />
             {searchQuery && (
               <button
@@ -214,12 +280,14 @@ export default function HomePage() {
               className={`flex gap-4 overflow-x-auto px-6 pb-4 ${!isOverflowing ? 'justify-center' : ''}`}
               style={{ scrollbarWidth: 'none', scrollSnapType: 'x mandatory' }}
             >
-              {filteredVideos.map(video => (
+              {filteredVideos.map((video, idx) => (
                 <VideoCard
                   key={video.id}
                   {...video}
                   onHoverTags={setHoveredTags}
                   onLeaveTags={() => setHoveredTags([])}
+                  onPlay={() => handlePlay(video.id)}
+                  isPlaying={idx === nowPlayingIdx}
                 />
               ))}
               <div className="w-2 shrink-0" />

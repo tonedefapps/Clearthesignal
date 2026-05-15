@@ -432,17 +432,18 @@ async function generateAudioBuffer(
   const SR = 48000
   const ctx = new OfflineAudioContext(2, Math.ceil(totalS * SR), SR)
   const master = ctx.createGain(); master.gain.value = 0.65; master.connect(ctx.destination)
+  const beatBus = ctx.createGain(); beatBus.connect(master)
 
-  function addTone(freq: number, t: number, dur: number, gain: number, atk = 0.05) {
+  function addTone(freq: number, t: number, dur: number, gain: number, atk = 0.05, dest: AudioNode = master) {
     const osc = ctx.createOscillator(), g = ctx.createGain()
     osc.type = 'sine'; osc.frequency.value = freq
     g.gain.setValueAtTime(0, t)
     g.gain.linearRampToValueAtTime(gain, t + atk)
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-    osc.connect(g); g.connect(master); osc.start(t); osc.stop(t + dur + 0.05)
+    osc.connect(g); g.connect(dest); osc.start(t); osc.stop(t + dur + 0.05)
   }
 
-  function addNoise(t: number, dur: number, gain: number, centerFreq: number, q = 0.5) {
+  function addNoise(t: number, dur: number, gain: number, centerFreq: number, q = 0.5, dest: AudioNode = master) {
     const sz = Math.ceil(dur * SR)
     const buf = ctx.createBuffer(1, sz, SR)
     const d = buf.getChannelData(0); for (let i = 0; i < sz; i++) d[i] = Math.random() * 2 - 1
@@ -452,40 +453,137 @@ async function generateAudioBuffer(
     const g = ctx.createGain()
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + 0.03)
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-    src.connect(filt); filt.connect(g); g.connect(master); src.start(t); src.stop(t + dur)
+    src.connect(filt); filt.connect(g); g.connect(dest); src.start(t); src.stop(t + dur)
   }
 
-  // ── Intro ─────────────────────────────────────────────────────────────────
-  addTone(110, 0, introEndS, 0.06, 1.2)           // deep space pad
-  addTone(220, 0.5, introEndS - 0.5, 0.03, 1.8)   // octave shimmer
-  addNoise(0.27, 0.6, 0.04, 1000)                  // tail trace
-  // Node sparkles as constellation maps itself
+  function kick(t: number) {
+    if (t < 0 || t >= totalS) return
+    const osc = ctx.createOscillator(), g = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(80, t)
+    osc.frequency.exponentialRampToValueAtTime(40, t + 0.08)
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.9, t + 0.005)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35)
+    osc.connect(g); g.connect(beatBus); osc.start(t); osc.stop(t + 0.4)
+  }
+
+  function snare(t: number) {
+    if (t < 0 || t >= totalS) return
+    const sz = Math.ceil(0.22 * SR)
+    const buf = ctx.createBuffer(1, sz, SR)
+    const d = buf.getChannelData(0); for (let i = 0; i < sz; i++) d[i] = Math.random() * 2 - 1
+    const src = ctx.createBufferSource(); src.buffer = buf
+    const filt = ctx.createBiquadFilter(); filt.type = 'bandpass'
+    filt.frequency.value = 200; filt.Q.value = 0.8
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.5, t + 0.005)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22)
+    src.connect(filt); filt.connect(g); g.connect(beatBus); src.start(t); src.stop(t + 0.22)
+    addTone(220, t, 0.08, 0.12, 0.003, beatBus)
+  }
+
+  function hat(t: number) {
+    if (t < 0 || t >= totalS) return
+    const sz = Math.ceil(0.08 * SR)
+    const buf = ctx.createBuffer(1, sz, SR)
+    const d = buf.getChannelData(0); for (let i = 0; i < sz; i++) d[i] = Math.random() * 2 - 1
+    const src = ctx.createBufferSource(); src.buffer = buf
+    const filt = ctx.createBiquadFilter(); filt.type = 'highpass'
+    filt.frequency.value = 8000
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.04, t + 0.002)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08)
+    src.connect(filt); filt.connect(g); g.connect(beatBus); src.start(t); src.stop(t + 0.08)
+  }
+
+  function bassNote(t: number, freq: number) {
+    if (t < 0 || t >= totalS) return
+    const osc = ctx.createOscillator(), g = ctx.createGain()
+    osc.type = 'triangle'; osc.frequency.value = freq
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.18, t + 0.01)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55)
+    osc.connect(g); g.connect(beatBus); osc.start(t); osc.stop(t + 0.6)
+  }
+
+  // ── beatBus gain envelope ─────────────────────────────────────────────────
+  const beatStartS = Math.max(0, introEndS - 3.0)
+  const flyOffS = outroStartS + 78 / 30
+  beatBus.gain.setValueAtTime(0, 0)
+  beatBus.gain.setValueAtTime(0, beatStartS)
+  beatBus.gain.linearRampToValueAtTime(0.5, beatStartS + 2.5)
+  beatBus.gain.linearRampToValueAtTime(0.8, introEndS)
+  beatBus.gain.setValueAtTime(0.8, outroStartS)
+  beatBus.gain.linearRampToValueAtTime(0, Math.min(flyOffS, totalS))
+
+  // ── Pad chord on beatBus ──────────────────────────────────────────────────
+  const padEnd = Math.min(flyOffS, totalS)
+  if (padEnd > beatStartS) {
+    for (const freq of [110, 164.8, 220]) {
+      const osc = ctx.createOscillator(), g = ctx.createGain()
+      osc.type = 'triangle'; osc.frequency.value = freq
+      g.gain.setValueAtTime(0, beatStartS)
+      g.gain.linearRampToValueAtTime(0.04, beatStartS + 1.5)
+      g.gain.setValueAtTime(0.04, padEnd - 0.5)
+      g.gain.linearRampToValueAtTime(0, padEnd)
+      osc.connect(g); g.connect(beatBus); osc.start(beatStartS); osc.stop(padEnd + 0.05)
+    }
+  }
+
+  // ── 88 BPM beat scheduling ────────────────────────────────────────────────
+  const BPM = 88, b = 60 / BPM
+  const totalBeats = Math.ceil((totalS - beatStartS) / b) + 1
+  for (let n = 0; n < totalBeats; n++) {
+    const t = beatStartS + n * b
+    if (t >= totalS) break
+    const bar = n % 4
+    kick(t); hat(t); hat(t + b / 2)
+    if (bar === 1 || bar === 3) snare(t)
+    bassNote(t, bar % 2 === 0 ? 55 : 82.4)
+  }
+
+  // ── Opening woosh (master) ────────────────────────────────────────────────
+  function addWoosh() {
+    const dur = 2.8
+    const sz = Math.ceil(dur * SR)
+    const buf = ctx.createBuffer(1, sz, SR)
+    const d = buf.getChannelData(0); for (let i = 0; i < sz; i++) d[i] = Math.random() * 2 - 1
+    const src = ctx.createBufferSource(); src.buffer = buf
+    const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'
+    filt.frequency.setValueAtTime(60, 0)
+    filt.frequency.exponentialRampToValueAtTime(8000, dur)
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(0.25, 0.3)
+    g.gain.exponentialRampToValueAtTime(0.0001, dur)
+    src.connect(filt); filt.connect(g); g.connect(master); src.start(0); src.stop(dur)
+  }
+  addWoosh()
+
+  // ── Intro cinematic (master) ──────────────────────────────────────────────
+  addTone(110, 0, introEndS, 0.06, 1.2)
+  addTone(220, 0.5, introEndS - 0.5, 0.03, 1.8)
+  addNoise(0.27, 0.6, 0.04, 1000)
   const ss = 22/30, se = 68/30
   const nodeData: [number, number][] = [
     [.10,523],[.19,587],[.27,659],[.35,740],[.43,830],[.50,932],
     [.57,1047],[.64,1175],[.70,1047],[.75,932],[.80,830],[.85,740],[.89,659],[.93,587],
   ]
   nodeData.forEach(([t, freq]) => addTone(freq, ss + t*(se-ss), 0.25, 0.012, 0.01))
-  // Center glow ignition
   addTone(880, 2.27, 3.0, 0.09, 0.02)
   addTone(1320, 2.30, 2.2, 0.04, 0.02)
   addNoise(2.27, 0.35, 0.07, 2500, 0.4)
-  // Wordmark resolves and holds
   addTone(440, 2.53, introEndS - 2.53, 0.07, 0.15)
   addTone(330, 2.65, introEndS - 2.65, 0.03, 0.20)
 
-  // ── Outro ─────────────────────────────────────────────────────────────────
+  // ── Outro cinematic (master) ──────────────────────────────────────────────
   const os = outroStartS
-  addTone(110, os, 4.0, 0.05, 0.4)                // grounding pad
-  addTone(880, os, 0.8, 0.06, 0.03)               // center glow resonance echo
-  addTone(165, os + 0.33, 2.3, 0.04, 0.5)         // departure tension
+  addTone(110, os, 4.0, 0.05, 0.4)
+  addTone(880, os, 0.8, 0.06, 0.03)
+  addTone(165, os + 0.33, 2.3, 0.04, 0.5)
   addTone(220, os + 0.80, 1.8, 0.02, 0.5)
-  // Fly-off whoosh (layered low→mid→high)
   const fo = os + 78/30
   addNoise(fo,        1.10, 0.12, 300,  0.3)
   addNoise(fo + 0.15, 0.80, 0.08, 1200, 0.35)
   addNoise(fo + 0.25, 0.55, 0.05, 4500, 0.4)
-  // Wordmark landing chime
   addTone(440, os + 3.0,  1.5, 0.06, 0.06)
   addTone(880, os + 3.07, 1.0, 0.03, 0.02)
 
