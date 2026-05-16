@@ -384,43 +384,73 @@ function drawOutroFrame(ctx: OffscreenCanvasRenderingContext2D, frame: number) {
   }
 }
 
+function drawWatermark(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) {
+  const s = 0.8
+  const ox = 55
+  const oy = SLIDE_H - 90 - Math.round(120 * s)
+  const wx = (x: number) => ox + x * s
+  const wy = (y: number) => oy + y * s
+
+  ctx.save()
+  ctx.globalAlpha = 0.09
+  ctx.strokeStyle = '#a89fc8'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+
+  ctx.beginPath()
+  _TP.forEach(([x, y], i) => { if (i === 0) ctx.moveTo(wx(x), wy(y)); else ctx.lineTo(wx(x), wy(y)) })
+  ctx.stroke()
+
+  ctx.beginPath()
+  _SP.forEach(([x, y], i) => { if (i === 0) ctx.moveTo(wx(x), wy(y)); else ctx.lineTo(wx(x), wy(y)) })
+  ctx.stroke()
+
+  ctx.fillStyle = '#a89fc8'
+  for (const nd of _ND) {
+    ctx.beginPath(); ctx.arc(wx(nd.cx), wy(nd.cy), Math.max(1, nd.r * s * 2), 0, Math.PI * 2); ctx.fill()
+  }
+  ctx.beginPath(); ctx.arc(wx(60), wy(60), 3 * s, 0, Math.PI * 2); ctx.fill()
+
+  ctx.globalAlpha = 0.07
+  ctx.font = '26px system-ui, sans-serif'; ctx.textAlign = 'left'
+  ctx.fillText('clear the signal', ox, oy + Math.round(120 * s) + 38)
+
+  ctx.restore()
+}
+
 function drawVideoCard(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   video: VideoOption,
   thumb: HTMLImageElement | ImageBitmap | null
 ) {
   const grad = ctx.createLinearGradient(0, 0, 0, SLIDE_H)
-  grad.addColorStop(0, '#120f22'); grad.addColorStop(1, '#0a0815')
+  grad.addColorStop(0, '#0a0816'); grad.addColorStop(0.6, '#0d0a1a'); grad.addColorStop(1, '#120f22')
   ctx.fillStyle = grad; ctx.fillRect(0, 0, SLIDE_W, SLIDE_H)
 
-  const thumbH = 600, thumbY = 200
+  const thumbH = 1100, thumbY = 0
   if (thumb) {
     ctx.drawImage(thumb as CanvasImageSource, 0, thumbY, SLIDE_W, thumbH)
-    const overlay = ctx.createLinearGradient(0, thumbY + thumbH * 0.5, 0, thumbY + thumbH)
-    overlay.addColorStop(0, 'rgba(10,8,21,0)'); overlay.addColorStop(1, 'rgba(10,8,21,0.95)')
+    const overlay = ctx.createLinearGradient(0, thumbY + thumbH * 0.38, 0, thumbY + thumbH)
+    overlay.addColorStop(0, 'rgba(10,8,22,0)'); overlay.addColorStop(1, 'rgba(10,8,22,0.97)')
     ctx.fillStyle = overlay; ctx.fillRect(0, thumbY, SLIDE_W, thumbH)
   }
 
-  ctx.fillStyle = '#7d7a9a'; ctx.font = '40px system-ui, sans-serif'; ctx.textAlign = 'center'
-  ctx.fillText(video.channelTitle, SLIDE_W / 2, thumbY + thumbH + 70)
+  ctx.textAlign = 'center'
+  ctx.fillStyle = '#6b6fad'; ctx.font = '38px system-ui, sans-serif'
+  ctx.fillText(video.channelTitle, SLIDE_W / 2, 1175)
 
-  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 56px system-ui, sans-serif'
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 64px system-ui, sans-serif'
   const titleLines = wrapText(ctx, video.title, SLIDE_W - 120)
-  titleLines.slice(0, 3).forEach((line, i) => ctx.fillText(line, SLIDE_W / 2, thumbY + thumbH + 150 + i * 72))
+  titleLines.slice(0, 3).forEach((line, i) => ctx.fillText(line, SLIDE_W / 2, 1275 + i * 80))
 
   const points = getTopPoints(video)
-  const pointsY = thumbY + thumbH + 150 + Math.min(titleLines.length, 3) * 72 + 80
+  const pointsY = 1275 + Math.min(titleLines.length, 3) * 80 + 70
   ctx.fillStyle = '#a89fc8'; ctx.font = '42px system-ui, sans-serif'
   points.forEach((point, i) => {
-    wrapText(ctx, `· ${point}`, SLIDE_W - 120).slice(0, 2).forEach((line, j) => {
+    wrapText(ctx, `· ${point}`, SLIDE_W - 140).slice(0, 2).forEach((line, j) => {
       ctx.fillText(line, SLIDE_W / 2, pointsY + i * 130 + j * 56)
     })
   })
 
-  ctx.fillStyle = '#a89fc8'; ctx.font = 'bold 38px system-ui, sans-serif'; ctx.textAlign = 'left'
-  ctx.fillText('CTS', 60, 100)
-  ctx.fillStyle = '#7d7a9a'; ctx.font = '32px system-ui, sans-serif'
-  ctx.fillText('clear the signal', 120, 100)
+  drawWatermark(ctx)
   ctx.textAlign = 'center'
 }
 
@@ -609,6 +639,7 @@ export default function SocialTab() {
   const [refreshResult, setRefreshResult] = useState<string | null>(null)
   const [uploadedBlobUrl, setUploadedBlobUrl] = useState<string | null>(null)
   const [cardDuration, setCardDuration] = useState(6)
+  const [showPostFlow, setShowPostFlow] = useState(false)
   const previewRef = useRef<HTMLCanvasElement>(null)
 
   const getToken = useCallback(async () => user ? await user.getIdToken() : null, [user])
@@ -665,7 +696,7 @@ export default function SocialTab() {
   async function handleGenerate() {
     if (selected.size < 3) return
     const selectedVideos = videos.filter(v => selected.has(v.id))
-    setRendering(true); setVideoBlob(null); setPostedUrl(null); setPostError(null)
+    setRendering(true); setVideoBlob(null); setPostedUrl(null); setPostError(null); setShowPostFlow(false)
     try {
       setRenderProgress('loading thumbnails...')
       const thumbImages = await Promise.all(
@@ -808,7 +839,6 @@ export default function SocialTab() {
       try { data = await res.json() } catch { /* empty body */ }
       if (!res.ok) throw new Error((data.error as string) ?? `post failed (${res.status})`)
       setPostedUrl((data.permalink as string) ?? null)
-      setVideoBlob(null)
     } catch (e) {
       setPostError(String(e))
     } finally {
@@ -875,81 +905,113 @@ export default function SocialTab() {
 
       {/* Preview + Generate */}
       {selected.size > 0 && (
-        <div className="bg-mesa-light/60 border border-periwinkle/15 rounded-xl p-6">
-          <p className="text-xs text-sand/40 tracking-widest mb-4">reel preview</p>
-          <div className="flex gap-6 items-start">
-            <canvas ref={previewRef} width={180} height={320}
-              className="rounded-xl border border-periwinkle/20 flex-shrink-0 bg-[#0d0a1a]" />
-            <div className="flex flex-col gap-3 flex-1">
-              <div className="flex items-center gap-3 flex-wrap">
-                <p className="text-sm text-sand/60">
-                  {selectedVideos.length} video{selectedVideos.length !== 1 ? 's' : ''}
-                  <span className="text-sand/40 text-xs ml-2">
-                    ~{Math.round(INTRO_TOTAL_FRAMES / FPS + selectedVideos.length * cardDuration + OUTRO_TOTAL_FRAMES / FPS)}s
-                  </span>
-                </p>
-                <div className="flex items-center gap-1.5 ml-auto">
-                  <span className="text-xs text-sand/40">per video</span>
-                  {[5, 6, 7].map(s => (
-                    <button key={s} onClick={() => setCardDuration(s)}
-                      className={`px-2.5 py-1 rounded-lg text-xs transition-all ${cardDuration === s ? 'bg-periwinkle/30 text-periwinkle-light border border-periwinkle/40' : 'text-sand/40 hover:text-sand/60 border border-transparent'}`}>
-                      {s}s
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <button onClick={handleGenerate} disabled={rendering || selected.size < 3}
-                className="px-5 py-2.5 bg-periwinkle/20 border border-periwinkle/35 rounded-xl text-sm text-periwinkle-light hover:bg-periwinkle/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                {rendering ? renderProgress || 'rendering...' : 'generate reel'}
-              </button>
-              {selected.size < 3 && <p className="text-xs text-sand/40">select at least 3 videos</p>}
+        <div className="bg-mesa-light/60 border border-periwinkle/15 rounded-xl p-6 flex flex-col gap-5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-sand/40 tracking-widest">reel preview</p>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-sand/40">per card</span>
+              {[5, 6, 7].map(s => (
+                <button key={s} onClick={() => setCardDuration(s)}
+                  className={`px-2.5 py-1 rounded-lg text-xs transition-all ${cardDuration === s ? 'bg-periwinkle/30 text-periwinkle-light border border-periwinkle/40' : 'text-sand/40 hover:text-sand/60 border border-transparent'}`}>
+                  {s}s
+                </button>
+              ))}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Download (debug) */}
-      {videoBlob && (
-        <a href={URL.createObjectURL(videoBlob)} download="reel.mp4"
-          className="text-xs text-sand/40 hover:text-sand/70 underline self-start">
-          download reel for inspection
-        </a>
-      )}
-
-      {/* Post */}
-      {videoBlob && (
-        <div className="bg-mesa-light/60 border border-periwinkle/15 rounded-xl p-6 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-sand/40 tracking-widest">post to instagram</p>
-            <span className="text-xs text-desert-sky/80">{(videoBlob.size / 1024 / 1024).toFixed(1)} MB ready</span>
+          {/* Preview canvas — centered, bigger */}
+          <div className="flex justify-center">
+            <canvas ref={previewRef} width={270} height={480}
+              className="rounded-xl border border-periwinkle/20 bg-[#0a0816]"
+              style={{ maxWidth: '100%' }} />
           </div>
-          <textarea value={caption} onChange={e => setCaption(e.target.value)}
-            placeholder="caption (optional)..." rows={3}
-            className="w-full bg-mesa-light/40 border border-periwinkle/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-sand/30 resize-none focus:outline-none focus:border-periwinkle/40" />
-          <button onClick={handlePost} disabled={posting}
-            className="px-5 py-2.5 bg-desert-sky/20 border border-desert-sky/35 rounded-xl text-sm text-desert-sky hover:bg-desert-sky/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-            {posting ? 'posting...' : 'post to instagram →'}
+
+          <div className="flex items-center justify-between text-xs text-sand/40">
+            <span>{selectedVideos.length} video{selectedVideos.length !== 1 ? 's' : ''}</span>
+            <span>~{Math.round(INTRO_TOTAL_FRAMES / FPS + selectedVideos.length * cardDuration + OUTRO_TOTAL_FRAMES / FPS)}s total</span>
+          </div>
+
+          <button
+            onClick={handleGenerate}
+            disabled={rendering || selected.size < 3}
+            className="w-full py-4 bg-periwinkle border border-periwinkle/60 rounded-xl text-white font-semibold text-base hover:bg-periwinkle-light transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_24px_rgba(107,111,173,0.3)]"
+          >
+            {rendering
+              ? (renderProgress || 'rendering...')
+              : selected.size < 3
+                ? `select ${3 - selected.size} more video${3 - selected.size !== 1 ? 's' : ''} to generate`
+                : 'Generate Reel'}
           </button>
         </div>
       )}
 
-      {/* Result */}
-      {postedUrl && (
-        <div className="bg-desert-sky/10 border border-desert-sky/25 rounded-xl p-6">
-          <p className="text-sm text-desert-sky font-medium mb-2">posted ✓</p>
-          <a href={postedUrl} target="_blank" rel="noreferrer" className="text-sm text-periwinkle-light hover:underline">
-            view on instagram ↗
-          </a>
+      {/* Post-render actions */}
+      {videoBlob && (
+        <div className="bg-mesa-light/60 border border-periwinkle/20 rounded-xl p-6 flex flex-col gap-5">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-desert-sky" />
+            <span className="text-sm text-desert-sky/90 font-medium">Reel ready</span>
+            <span className="text-xs text-sand/40 ml-auto">{(videoBlob.size / 1024 / 1024).toFixed(1)} MB</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <a
+              href={URL.createObjectURL(videoBlob)}
+              download="clear-the-signal-reel.mp4"
+              className="flex items-center justify-center gap-2 py-4 bg-mesa-light border border-white/15 rounded-xl text-white font-medium hover:border-periwinkle/50 hover:bg-periwinkle/10 transition-all text-sm"
+            >
+              ↓ Download Video
+            </a>
+            <button
+              onClick={() => setShowPostFlow(p => !p)}
+              className={`flex items-center justify-center gap-2 py-4 rounded-xl font-medium transition-all text-sm border ${
+                showPostFlow
+                  ? 'bg-periwinkle/30 border-periwinkle/60 text-periwinkle-light'
+                  : 'bg-periwinkle/15 border-periwinkle/35 text-periwinkle-light hover:bg-periwinkle/25'
+              }`}
+            >
+              → Post to Instagram
+            </button>
+          </div>
+
+          {showPostFlow && (
+            <div className="flex flex-col gap-3 border-t border-periwinkle/15 pt-4">
+              <textarea
+                value={caption}
+                onChange={e => setCaption(e.target.value)}
+                placeholder="caption (optional)..."
+                rows={3}
+                className="w-full bg-mesa-light/40 border border-periwinkle/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-sand/30 resize-none focus:outline-none focus:border-periwinkle/40"
+              />
+              <button
+                onClick={handlePost}
+                disabled={posting}
+                className="w-full py-3.5 bg-gradient-to-r from-periwinkle to-periwinkle-light rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {posting ? 'publishing...' : 'Publish to Instagram →'}
+              </button>
+            </div>
+          )}
+
+          {postedUrl && (
+            <div className="flex items-center gap-3 bg-desert-sky/10 border border-desert-sky/25 rounded-xl px-4 py-3">
+              <span className="text-sm text-desert-sky font-medium">Published ✓</span>
+              <a href={postedUrl} target="_blank" rel="noreferrer"
+                className="text-sm text-periwinkle-light hover:text-white transition-colors ml-auto">
+                view on instagram ↗
+              </a>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Error */}
+      {/* Post error */}
       {postError && (
         <div className="bg-red-rock/10 border border-red-rock/25 rounded-xl p-4 flex flex-col gap-2">
           <p className="text-sm text-red-rock/80">{postError}</p>
           {uploadedBlobUrl && (
             <div className="flex flex-col gap-1">
-              <p className="text-xs text-sand/40">blob url (test in Graph API Explorer):</p>
+              <p className="text-xs text-sand/40">blob url (for Graph API Explorer debugging):</p>
               <p className="text-xs text-sand/60 break-all font-mono">{uploadedBlobUrl}</p>
             </div>
           )}
