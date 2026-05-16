@@ -559,8 +559,27 @@ async function generateAudioBuffer(
     }
   }
 
-  // ── 88 BPM beat scheduling ────────────────────────────────────────────────
+  // ── Ethereal strings on beatBus ──────────────────────────────────────────
+  function stringsNote(freq: number, t: number, dur: number, gain = 0.055) {
+    if (t >= totalS || dur <= 0) return
+    const clampedDur = Math.min(dur, totalS - t)
+    const osc = ctx.createOscillator(), filt = ctx.createBiquadFilter(), g = ctx.createGain()
+    osc.type = 'sawtooth'; osc.frequency.value = freq
+    filt.type = 'lowpass'; filt.frequency.value = 1600; filt.Q.value = 0.4
+    const atk = Math.min(0.7, clampedDur * 0.3)
+    g.gain.setValueAtTime(0, t)
+    g.gain.linearRampToValueAtTime(gain, t + atk)
+    g.gain.setValueAtTime(gain, t + clampedDur - 0.5)
+    g.gain.linearRampToValueAtTime(0, t + clampedDur)
+    osc.connect(filt); filt.connect(g); g.connect(beatBus)
+    osc.start(t); osc.stop(t + clampedDur + 0.05)
+  }
+
+  // 88 BPM beat scheduling ─────────────────────────────────────────────────
   const BPM = 88, b = 60 / BPM
+  // strings: A4 + E5, swapping in a C#5 every 2 bars for color
+  const stringsPattern = [[440, 659.3], [440, 659.3], [440, 554.4], [440, 659.3]]
+  const noteDur = 4 * b + 0.9  // 1 bar + overlap tail
   const totalBeats = Math.ceil((totalS - beatStartS) / b) + 1
   for (let n = 0; n < totalBeats; n++) {
     const t = beatStartS + n * b
@@ -569,6 +588,12 @@ async function generateAudioBuffer(
     kick(t); hat(t); hat(t + b / 2)
     if (bar === 1 || bar === 3) snare(t)
     bassNote(t, bar % 2 === 0 ? 55 : 82.4)
+    // schedule strings on the downbeat of each bar
+    if (bar === 0) {
+      const [f1, f2] = stringsPattern[(n / 4) % stringsPattern.length]
+      stringsNote(f1, t, noteDur, 0.055)
+      stringsNote(f2, t, noteDur, 0.038)
+    }
   }
 
   // ── Opening woosh (master) ────────────────────────────────────────────────
