@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext'
 import { createSignalPost, deleteSignalPost, getSignalPosts, type SignalPost } from '@/lib/firebase/signal'
 import { getRecentVideos, removeVideo, getVideoStats, approveVideo, rejectVideo, setAmplified, getAmplifiedVideo, updateAmplifiedAnalysis, type VideoSummary } from '@/lib/firebase/videos'
 import { getUserByEmail, setUserRole, getTeamMembers, type UserProfile } from '@/lib/firebase/users'
-import { getChannels, setChannelTier, type ChannelRecord, type ChannelTier } from '@/lib/firebase/channels'
+import { getChannels, setChannelTier, addChannel, type ChannelRecord, type ChannelTier } from '@/lib/firebase/channels'
 import { CANONICAL_TAGS } from '@/lib/constants/tags'
 import { getDb, doc, getDoc, setDoc, updateDoc, serverTimestamp } from '@/lib/firebase/server'
 import SiteNav from '@/components/SiteNav'
@@ -415,11 +415,27 @@ const TIER_META: Record<ChannelTier, { label: string; cls: string }> = {
   noise:   { label: 'noise',   cls: 'bg-red-rock/15 border-red-rock/35 text-red-rock/80' },
 }
 
+function parseChannelId(input: string): string {
+  const trimmed = input.trim()
+  // youtube.com/channel/UC...
+  const channelMatch = trimmed.match(/youtube\.com\/channel\/(UC[\w-]+)/)
+  if (channelMatch) return channelMatch[1]
+  // youtube.com/@handle — can't resolve to ID client-side, return as-is
+  // Raw ID: starts with UC, ~24 chars
+  if (/^UC[\w-]{20,}$/.test(trimmed)) return trimmed
+  return trimmed
+}
+
 function ChannelsTab() {
   const [channels, setChannels] = useState<ChannelRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<ChannelTier | 'all'>('all')
   const [updating, setUpdating] = useState<string | null>(null)
+  const [addName, setAddName] = useState('')
+  const [addId, setAddId] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState('')
+  const [addSuccess, setAddSuccess] = useState('')
 
   useEffect(() => {
     getChannels().then(setChannels).catch(() => {}).finally(() => setLoading(false))
@@ -434,12 +450,69 @@ function ChannelsTab() {
     finally { setUpdating(null) }
   }
 
+  async function handleAddChannel(e: React.FormEvent) {
+    e.preventDefault()
+    setAddError(''); setAddSuccess('')
+    const channelId = parseChannelId(addId)
+    const channelName = addName.trim()
+    if (!channelName || !channelId) { setAddError('channel name and ID are required'); return }
+    if (channels.some(c => c.channelId === channelId)) {
+      setAddError('channel already exists — use the tier buttons below to change it'); return
+    }
+    setAdding(true)
+    try {
+      await addChannel({ channelId, channelName, tier: 'trusted' })
+      const newRecord: ChannelRecord = {
+        channelId, channelName, tier: 'trusted', addedBy: 'admin',
+        avgScore: 0, passRate: 0, videoCount: 0, notes: '',
+      }
+      setChannels(prev => [newRecord, ...prev])
+      setAddName(''); setAddId('')
+      setAddSuccess(`"${channelName}" added as trusted.`)
+      setTimeout(() => setAddSuccess(''), 4000)
+    } catch { setAddError('failed to add channel') }
+    finally { setAdding(false) }
+  }
+
   const shown = channels.filter(c => filter === 'all' || c.tier === filter)
   const counts = { trusted: 0, watch: 0, noise: 0 }
   channels.forEach(c => counts[c.tier]++)
 
   return (
     <div className="flex flex-col gap-6">
+
+      {/* manual add */}
+      <div className="bg-mesa-light/60 border border-periwinkle/15 rounded-xl p-5">
+        <p className="text-xs text-sand/40 tracking-widest mb-4">add channel</p>
+        {addError && <p className="text-sm text-red-rock/70 mb-3">{addError}</p>}
+        {addSuccess && <p className="text-sm text-desert-sky/80 mb-3">{addSuccess}</p>}
+        <form onSubmit={handleAddChannel} className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            placeholder="channel name"
+            value={addName}
+            onChange={e => setAddName(e.target.value)}
+            className={inputCls + ' flex-1'}
+          />
+          <input
+            type="text"
+            placeholder="channel ID or youtube.com/channel/UC… URL"
+            value={addId}
+            onChange={e => setAddId(e.target.value)}
+            className={inputCls + ' flex-1'}
+          />
+          <button
+            type="submit"
+            disabled={adding || !addName.trim() || !addId.trim()}
+            className="shrink-0 bg-desert-sky/15 border border-desert-sky/40 text-desert-sky text-sm font-medium px-5 py-3 rounded-xl hover:bg-desert-sky/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {adding ? 'adding...' : '+ Add as Trusted'}
+          </button>
+        </form>
+        <p className="text-xs text-sand/25 mt-2">
+          channel ID: open the channel on YouTube → the URL contains <span className="font-mono">/channel/UC…</span>
+        </p>
+      </div>
 
       {/* summary */}
       <div className="grid grid-cols-3 gap-3">
